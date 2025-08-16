@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "935284675226",
+    "project_id": "growio-b5294",
+    "storage_bucket": "growio-b5294.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:935284675226:android:b09bea11cbeea015024523",
+        "android_client_info": {
+          "package_name": "com.example.vision2025"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuTAEbSw8HV73rVAKNK1ifU1mL5mXxFbk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
