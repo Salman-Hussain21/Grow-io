@@ -6,6 +6,7 @@ import 'package:vision2025/screens/community_screen.dart';
 import 'package:vision2025/screens/settings.dart';
 import '../../services/auth_service.dart';
 import 'care_scheduler.dart';
+import 'chat_screen.dart';
 import 'my_garden.dart';
 import 'notifications_screen.dart';
 import 'plant_analysis_screen.dart';
@@ -430,10 +431,15 @@ class _HomeContentState extends State<HomeContent> {
             ),
             _buildToolCard(
               icon: Icons.insights,
-              title: 'Growth Analytics',
-              subtitle: 'Track plant progress',
+              title: 'GrowBot',
+              subtitle: 'Disscuss about plant progress',
               color: Colors.purple,
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ChatScreen()),
+                );
+              },
             ),
           ],
         ),
