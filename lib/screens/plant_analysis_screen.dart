@@ -21,7 +21,7 @@ class PlantAnalysisScreen extends StatefulWidget {
 }
 
 class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
-  final apiKey = "apvM6NGAQjwjtXFIpKoqsSbxFM9nWi1a12NmbTj8vZmHxvD7we";
+  final apiKey = "rkgDlTzrfd8zQjxsHZtpAYQltrnQ0JRBrClvXwdTVRywDBC74c";
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -426,16 +426,6 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
 
   void _processHealthResult(dynamic result) {
     print('Full Health API Response: ${jsonEncode(result)}');
-
-    // First check if this is actually a plant
-    if (!_isValidPlant(result)) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = "Kindly upload a valid plant image. The uploaded image doesn't appear to contain a plant.";
-        _selectedImage = null; // Clear the selected image
-      });
-      return;
-    }
 
     setState(() {
       _isLoading = false;
