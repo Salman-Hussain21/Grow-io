@@ -36,29 +36,6 @@ class PlantDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Swipe Note
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue[100]!),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.swipe, size: 20, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Swipe right on the plant card in My Garden to remove it',
-                        style: TextStyle(fontSize: 12, color: Colors.blue),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
               // Plant Image
               Container(
                 width: 120,
@@ -152,8 +129,90 @@ class PlantDetailScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _buildInfoRow('Added to garden', _formatDate(plant.addedDate)),
-                      _buildInfoRow('Last analysis', _formatDate(plant.lastAnalysisDate)),
+
+                      // Note Section (if available)
+                      if (plant.note != null && plant.note!.isNotEmpty)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Note:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.blue),
+                              ),
+                              child: Text(
+                                plant.note!,
+                                style: const TextStyle(color: Colors.blue),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+
+                      _buildInfoRow('Added to garden', _formatDateTime(plant.addedDate)),
+                      _buildInfoRow('Last checked', _formatDateTime(plant.lastAnalysisDate)),
+
+                      // Improvement Percentage (if available)
+                      if (plant.improvementPercentage != null && plant.improvementPercentage != 0)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              const Text(
+                                'Improvement: ',
+                                style: TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: plant.improvementPercentage! > 0
+                                      ? Colors.green.withOpacity(0.1)
+                                      : Colors.orange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: plant.improvementPercentage! > 0
+                                        ? Colors.green
+                                        : Colors.orange,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      plant.improvementPercentage! > 0
+                                          ? Icons.trending_up
+                                          : Icons.trending_down,
+                                      size: 16,
+                                      color: plant.improvementPercentage! > 0
+                                          ? Colors.green
+                                          : Colors.orange,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${plant.improvementPercentage!.toStringAsFixed(1)}%',
+                                      style: TextStyle(
+                                        color: plant.improvementPercentage! > 0
+                                            ? Colors.green
+                                            : Colors.orange,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                       const SizedBox(height: 12),
                       Text(
                         plant.plantDetails,
@@ -174,8 +233,6 @@ class PlantDetailScreen extends StatelessWidget {
               if (plant.isHealthy)
                 _buildHealthyPlantMessage(),
 
-
-
               // Inconsistent data case: If plant has diseases but marked as healthy
               if (plant.diseases.isNotEmpty && plant.isHealthy)
                 Card(
@@ -192,7 +249,7 @@ class PlantDetailScreen extends StatelessWidget {
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          'Plant is now healthy (last checked: ${_formatDate(plant.lastAnalysisDate)})',
+                          'Plant is now healthy (last checked: ${_formatDateTime(plant.lastAnalysisDate)})',
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -232,7 +289,7 @@ class PlantDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Last checked: ${_formatDate(plant.lastAnalysisDate)}',
+              'Last checked: ${_formatDateTime(plant.lastAnalysisDate)}',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
@@ -360,9 +417,9 @@ class PlantDetailScreen extends StatelessWidget {
     }
   }
 
-  String _formatDate(Timestamp timestamp) {
+  String _formatDateTime(Timestamp timestamp) {
     final date = timestamp.toDate();
-    return '${date.day}/${date.month}/${date.year}';
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   void _showDeleteConfirmation(BuildContext context) {

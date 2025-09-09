@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -21,7 +22,15 @@ class PlantAnalysisScreen extends StatefulWidget {
 }
 
 class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
-  final apiKey = "rkgDlTzrfd8zQjxsHZtpAYQltrnQ0JRBrClvXwdTVRywDBC74c";
+  // Multiple API keys for rotation
+  final List<String> apiKeys = [
+    // "rkgDlTzrfd8zQjxsHZtpAYQltrnQ0JRBrClvXwdTVRywDBC74c",
+    // "SQutC5nRxs4Srjh4l8eiHRsxLBogHQ6lnRy841LbeIO5kTeJ8n",
+    "claCuW52gD5y7DMHDHsbsXjSzNzr71CferpKbNdh7JxMfF5wF9",
+    "FWAknG43oYzjSN0MR71hMWGeAmXv5HF3i2QXOeuU3W5V49mouY",
+  ];
+
+  int _currentApiKeyIndex = 0;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -31,6 +40,16 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
   PlantIdentificationResult? _identificationResult;
   PlantAnalysisResult? _analysisResult;
   String? _errorMessage;
+  List<Map<String, dynamic>> _matchingGardenPlants = [];
+  bool _isCheckingGarden = false;
+  bool _showGardenUpdateNotification = false;
+  String _plantNote = '';
+  final TextEditingController _noteController = TextEditingController();
+  double _improvementPercentage = 0.0;
+  bool _isNewPlant = false;
+
+  // Local plant names database
+  Map<String, String> _plantCommonNames = {};
 
   // App colors
   final Color primaryColor = const Color(0xFF4CAF50);
@@ -38,6 +57,352 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
   final Color accentColor = const Color(0xFF689F38);
   final Color backgroundColor = const Color(0xFFF9FBE7);
   final Color textColor = const Color(0xFF33691E);
+
+  @override
+  void initState() {
+    super.initState();
+    // Load plant names from your text file
+    _loadPlantNamesFromText();
+  }
+
+// Load plant names from text file
+  Future<void> _loadPlantNamesFromText() async {
+    try {
+      final String content = await rootBundle.loadString('assets/plant_names.txt');
+      final lines = content.split('\n');
+      final plantMap = <String, String>{};
+
+      int loadedCount = 0;
+
+      for (final line in lines) {
+        if (line.trim().isEmpty || line.startsWith('"Symbol"')) continue;
+
+        // Parse CSV with quotes correctly - split by comma but respect quotes
+        final parsedLine = _parseCsvLine(line);
+        if (parsedLine.length >= 4) {
+          final scientificName = parsedLine[2].trim();
+          final commonName = parsedLine[3].trim();
+
+          if (scientificName.isNotEmpty && commonName.isNotEmpty) {
+            // Clean the scientific name
+            final cleanScientificName = _cleanScientificName(scientificName);
+
+            if (cleanScientificName.isNotEmpty) {
+              // Store with cleaned scientific name as key
+              final key = cleanScientificName.toLowerCase();
+              plantMap[key] = commonName;
+
+              loadedCount++;
+
+              // For debugging, print Dracaena entries
+              if (key.contains('dracaena') && loadedCount <= 20) {
+                print('Dracaena entry: "$key" -> "$commonName"');
+              }
+            }
+          }
+        }
+      }
+
+      setState(() {
+        _plantCommonNames = plantMap;
+      });
+      print('Successfully loaded $loadedCount plant names from text file');
+    } catch (e) {
+      print('Failed to load plant names: $e');
+    }
+  }
+
+// Parse a CSV line with quotes correctly
+  List<String> _parseCsvLine(String line) {
+    final result = <String>[];
+    var current = StringBuffer();
+    var inQuotes = false;
+
+    for (var i = 0; i < line.length; i++) {
+      final char = line[i];
+
+      if (char == '"') {
+        // Toggle quote state
+        inQuotes = !inQuotes;
+      } else if (char == ',' && !inQuotes) {
+        // Comma outside quotes - end of field
+        result.add(current.toString());
+        current = StringBuffer();
+      } else {
+        current.write(char);
+      }
+    }
+
+    // Add the last field
+    result.add(current.toString());
+    return result;
+  }
+
+// Clean scientific name by removing author names and other extras
+  String _cleanScientificName(String scientificName) {
+    // Remove content in parentheses (author names)
+    String cleaned = scientificName.replaceAll(RegExp(r'\([^)]*\)'), '');
+
+    // Remove author abbreviations like "L." or "Mill."
+    cleaned = cleaned.replaceAll(RegExp(r'\b[A-Z][a-z]*\.'), '');
+
+    // Remove any single quotes or cultivar indicators
+    cleaned = cleaned.replaceAll("'", '').replaceAll('"', '');
+
+    // Trim and clean up extra spaces
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    return cleaned;
+  }
+
+// Get common name from scientific name using local database
+  String _getCommonName(String scientificName) {
+    if (scientificName.isEmpty) return '';
+
+    final lowerCaseName = scientificName.toLowerCase();
+    print('Looking up common name for: "$lowerCaseName"');
+
+    // Clean the input scientific name
+    final cleanedInputName = _cleanScientificName(lowerCaseName);
+    print('Cleaned input name: "$cleanedInputName"');
+
+    // 1. First try EXACT match with the cleaned scientific name
+    if (_plantCommonNames.containsKey(cleanedInputName)) {
+      final commonName = _plantCommonNames[cleanedInputName]!;
+      print('Found exact match: "$commonName"');
+      return commonName;
+    }
+
+    // 2. Try to find the specific plant by checking if we have a key that matches
+    // the full scientific name (not just a partial match)
+    for (final key in _plantCommonNames.keys) {
+      if (key == cleanedInputName) {
+        final commonName = _plantCommonNames[key]!;
+        print('Found exact key match: "$key" -> "$commonName"');
+        return commonName;
+      }
+    }
+
+    // 3. Try reverse lookup - check if any key contains the full scientific name
+    String bestMatch = '';
+    int bestMatchLength = 0;
+
+    for (final key in _plantCommonNames.keys) {
+      // Look for keys that are contained within the scientific name
+      if (cleanedInputName.contains(key) && key.length > bestMatchLength) {
+        bestMatch = _plantCommonNames[key]!;
+        bestMatchLength = key.length;
+        print('Found contained key match: "$key" -> "$bestMatch"');
+      }
+    }
+
+    if (bestMatch.isNotEmpty) {
+      return bestMatch;
+    }
+
+    // 4. Try word-by-word matching (look for individual words from scientific name)
+    final words = cleanedInputName.split(' ');
+    for (final word in words) {
+      if (word.length > 4 && _plantCommonNames.containsKey(word)) {
+        final commonName = _plantCommonNames[word]!;
+        print('Found word match: "$word" -> "$commonName"');
+        return commonName;
+      }
+    }
+
+    // 5. If no match found, return empty string
+    print('No common name found for: "$cleanedInputName"');
+    print('Available keys: ${_plantCommonNames.keys.where((k) => k.contains("dracaena")).take(10).toList()}');
+    return '';
+  }
+
+
+
+  // Get the current API key
+  String get _currentApiKey {
+    return apiKeys[_currentApiKeyIndex];
+  }
+
+  // Rotate to the next API key
+  void _rotateApiKey() {
+    setState(() {
+      _currentApiKeyIndex = (_currentApiKeyIndex + 1) % apiKeys.length;
+    });
+  }
+
+  // Check if the identified plant exists in the user's garden
+  Future<void> _checkIfPlantExistsInGarden(String plantName) async {
+    if (_auth.currentUser == null) return;
+
+    setState(() {
+      _isCheckingGarden = true;
+    });
+
+    try {
+      final gardenSnapshot = await _firestore
+          .collection('users')
+          .doc(_auth.currentUser!.uid)
+          .collection('garden')
+          .get();
+
+      // Simple name matching
+      final matches = gardenSnapshot.docs.where((doc) {
+        final data = doc.data();
+        final gardenPlantName = data['plantName']?.toString().toLowerCase() ?? '';
+        return gardenPlantName.contains(plantName.toLowerCase()) ||
+            plantName.toLowerCase().contains(gardenPlantName);
+      }).map((doc) {
+        return {
+          'id': doc.id,
+          ...doc.data(),
+        };
+      }).toList();
+
+      setState(() {
+        _matchingGardenPlants = matches;
+        _isCheckingGarden = false;
+      });
+    } catch (e) {
+      print('Error checking garden: $e');
+      setState(() {
+        _isCheckingGarden = false;
+      });
+    }
+  }
+
+  // Update existing plant in garden with new analysis results
+  Future<void> _updateGardenPlant(String plantId, Map<String, dynamic> plantData) async {
+    if (_auth.currentUser == null || _analysisResult == null) return;
+
+    try {
+      bool isPlantHealthy = _analysisResult!.isHealthy;
+
+      // Prepare diseases if plant is NOT healthy
+      List<Map<String, dynamic>> diseaseDetails = [];
+      if (!isPlantHealthy && _analysisResult!.diseases.isNotEmpty) {
+        for (var disease in _analysisResult!.diseases) {
+          diseaseDetails.add({
+            'name': disease.name,
+            'probability': disease.probability,
+            'description': disease.description ?? 'No description available',
+            'treatment': disease.treatment ?? 'No treatment information available',
+          });
+        }
+      }
+
+      // Calculate improvement percentage if previous health status exists
+      if (plantData['healthStatus'] != null) {
+        bool wasHealthy = plantData['healthStatus'] == 'Healthy';
+        _improvementPercentage = wasHealthy && isPlantHealthy ? 100.0 :
+        wasHealthy && !isPlantHealthy ? -50.0 :
+        !wasHealthy && isPlantHealthy ? 100.0 : 0.0;
+      }
+
+      final updateData = {
+        'healthStatus': isPlantHealthy ? 'Healthy' : 'Needs Attention',
+        'lastAnalysisDate': Timestamp.now(),
+        'diseases': diseaseDetails,
+        'isHealthy': isPlantHealthy,
+        'note': _plantNote.isNotEmpty ? _plantNote : plantData['note'] ?? '',
+        'lastAnalysisResult': _analysisResult!.isHealthy ? 'Healthy' : 'Diseases detected',
+        'improvementPercentage': _improvementPercentage,
+      };
+
+      await _firestore
+          .collection('users')
+          .doc(_auth.currentUser!.uid)
+          .collection('garden')
+          .doc(plantId)
+          .update(updateData);
+
+      // Show success message
+      setState(() {
+        _showGardenUpdateNotification = true;
+      });
+
+      // Hide notification after 3 seconds
+      Future.delayed(Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _showGardenUpdateNotification = false;
+          });
+        }
+      });
+
+      if (widget.onAnalysisComplete != null) {
+        widget.onAnalysisComplete!();
+      }
+    } catch (e) {
+      print('Error updating garden plant: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update plant: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Add new plant to garden
+  Future<void> _addNewPlantToGarden() async {
+    if (_auth.currentUser == null || _identificationResult == null || _analysisResult == null) return;
+
+    try {
+      bool isPlantHealthy = _analysisResult!.isHealthy;
+
+      // Prepare diseases if plant is NOT healthy
+      List<Map<String, dynamic>> diseaseDetails = [];
+      if (!isPlantHealthy && _analysisResult!.diseases.isNotEmpty) {
+        for (var disease in _analysisResult!.diseases) {
+          diseaseDetails.add({
+            'name': disease.name,
+            'probability': disease.probability,
+            'description': disease.description ?? 'No description available',
+            'treatment': disease.treatment ?? 'No treatment information available',
+          });
+        }
+      }
+
+      final gardenData = {
+        'plantName': _identificationResult!.plantName,
+        'plantDetails': _identificationResult!.plantDetails,
+        'imageUrl': _identificationResult!.plantImageUrl,
+        'addedDate': Timestamp.now(),
+        'healthStatus': isPlantHealthy ? 'Healthy' : 'Needs Attention',
+        'lastAnalysisDate': Timestamp.now(),
+        'diseases': diseaseDetails,
+        'isHealthy': isPlantHealthy,
+        'note': _plantNote,
+        'improvementPercentage': 0.0,
+      };
+
+      await _firestore
+          .collection('users')
+          .doc(_auth.currentUser!.uid)
+          .collection('garden')
+          .add(gardenData);
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Plant added to your garden successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      if (widget.onAnalysisComplete != null) {
+        widget.onAnalysisComplete!();
+      }
+    } catch (e) {
+      print('Error adding plant to garden: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to add plant: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -55,6 +420,11 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
           _identificationResult = null;
           _analysisResult = null;
           _errorMessage = null;
+          _matchingGardenPlants = [];
+          _showGardenUpdateNotification = false;
+          _plantNote = '';
+          _noteController.clear();
+          _isNewPlant = false;
         });
         await _identifyPlant();
       }
@@ -81,6 +451,11 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
           _identificationResult = null;
           _analysisResult = null;
           _errorMessage = null;
+          _matchingGardenPlants = [];
+          _showGardenUpdateNotification = false;
+          _plantNote = '';
+          _noteController.clear();
+          _isNewPlant = false;
         });
         await _identifyPlant();
       }
@@ -126,7 +501,7 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
         Uri.parse("https://plant.id/api/v3/identification"),
         headers: {
           "Content-Type": "application/json",
-          "Api-Key": apiKey,
+          "Api-Key": _currentApiKey,
         },
         body: jsonEncode({
           "images": [base64Image],
@@ -148,6 +523,13 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
             _isLoading = false;
           });
         }
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        // API key might be invalid, rotate to next key and retry
+        _rotateApiKey();
+        setState(() {
+          _errorMessage = "API authentication failed. Retrying with different key...";
+        });
+        await _identifyPlant(); // Retry with new key
       } else {
         setState(() {
           _errorMessage = "API Error: ${response.statusCode}";
@@ -162,7 +544,7 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
     }
   }
 
-// ALTERNATIVE: Try with query parameters
+  // ALTERNATIVE: Try with query parameters
   Future<void> _detectDiseases() async {
     if (_selectedImage == null) return;
 
@@ -189,14 +571,14 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
         Uri.parse("https://plant.id/api/v3/identification?details=common_names,description,treatment,classification,local_name,cause,url"),
         headers: {
           "Content-Type": "application/json",
-          "Api-Key": apiKey,
+          "Api-Key": _currentApiKey,
         },
         body: jsonEncode({
           "images": [base64Image],
           "latitude": 49.207,
           "longitude": 16.608,
-          "similar_images": true,
-          "health": "only", // Health assessment only
+          'similar_images': true,
+          'health': 'all', // Health assessment
         }),
       );
 
@@ -216,6 +598,13 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
             _isLoading = false;
           });
         }
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        // API key might be invalid, rotate to next key and retry
+        _rotateApiKey();
+        setState(() {
+          _errorMessage = "API authentication failed. Retrying with different key...";
+        });
+        await _detectDiseases(); // Retry with new key
       } else {
         setState(() {
           _errorMessage = "API Error: ${response.statusCode} - ${response.body}";
@@ -243,7 +632,7 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
         final detailsResponse = await http.get(
           Uri.parse("https://api.plant.id/v3/identification/$identificationId"),
           headers: {
-            "Api-Key": apiKey,
+            "Api-Key": _currentApiKey,
           },
         );
 
@@ -259,6 +648,10 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
             });
             return;
           }
+        } else if (detailsResponse.statusCode == 401 || detailsResponse.statusCode == 403) {
+          // API key might be invalid, rotate to next key
+          _rotateApiKey();
+          continue; // Continue with next attempt using new key
         }
       }
 
@@ -288,7 +681,7 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
         final detailsResponse = await http.get(
           Uri.parse("https://api.plant.id/v3/identification/$identificationId"),
           headers: {
-            "Api-Key": apiKey,
+            "Api-Key": _currentApiKey,
           },
         );
 
@@ -302,7 +695,7 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
             return;
           } else if (details['status'] == 'failed') {
             setState(() {
-              _errorMessage = "Health assessment failed. Please try again.";
+              _errorMessage = 'Health assessment failed. Please try again.';
               _isLoading = false;
             });
             return;
@@ -310,6 +703,10 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
             // Still processing, continue waiting
             continue;
           }
+        } else if (detailsResponse.statusCode == 401 || detailsResponse.statusCode == 403) {
+          // API key might be invalid, rotate to next key
+          _rotateApiKey();
+          continue; // Continue with next attempt using new key
         } else {
           print('Details Response Error: ${detailsResponse.body}');
         }
@@ -384,28 +781,54 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
         return;
       }
 
-      String plantName = 'Unknown Plant';
+      String scientificName = 'Unknown Plant';
       String plantDetails = 'No details available';
       String wikiUrl = '';
       String plantImageUrl = '';
+      List<String> commonNames = [];
 
       if (result['result']['classification'] != null &&
           result['result']['classification']['suggestions'] != null &&
           result['result']['classification']['suggestions'].isNotEmpty) {
         final suggestion = result['result']['classification']['suggestions'][0];
-        plantName = suggestion['name'] ?? 'Unknown Plant';
+        scientificName = suggestion['name'] ?? 'Unknown Plant';
 
-        // Improved description extraction
+        // Try to get common names directly from the API response first
+        if (suggestion['details'] != null && suggestion['details']['common_names'] != null) {
+          commonNames = List<String>.from(suggestion['details']['common_names']);
+        }
+
+        // Get common name from our local database
+        String commonName = _getCommonName(scientificName);
+
+        // If no common names from API or local DB, try to extract from details
+        if (commonName.isEmpty && suggestion['details'] != null) {
+          final details = suggestion['details'];
+          if (details['common_names'] != null && (details['common_names'] as List).isNotEmpty) {
+            commonName = (details['common_names'] as List)[0].toString();
+          }
+        }
+
+        // Build plant details with both common and scientific names
+        if (commonName.isNotEmpty) {
+          plantDetails = "Common name: $commonName\nScientific name: $scientificName";
+        } else {
+          plantDetails = "Scientific name: $scientificName";
+        }
+
+        // Add additional common names if available
+        if (commonNames.length > 1) {
+          plantDetails += "\n\nAlso known as: ${commonNames.sublist(1).join(', ')}";
+        }
+
+        // Try multiple possible description fields
         if (suggestion['details'] != null) {
           final details = suggestion['details'];
 
-          // Try multiple possible description fields
-          if (details['common_names'] != null && (details['common_names'] as List).isNotEmpty) {
-            plantDetails = "Common names: ${(details['common_names'] as List).join(', ')}";
-          } else if (details['description'] != null) {
-            plantDetails = details['description']['value'] ?? 'No details available';
+          if (details['description'] != null && details['description']['value'] != null) {
+            plantDetails += "\n\nDescription: ${details['description']['value']}";
           } else if (details['taxonomy'] != null) {
-            plantDetails = "Taxonomy: ${details['taxonomy']['class'] ?? 'Unknown'}";
+            plantDetails += "\n\nTaxonomy: ${details['taxonomy']['class'] ?? 'Unknown'}";
           }
         }
 
@@ -413,15 +836,23 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
             suggestion['similar_images'].isNotEmpty) {
           plantImageUrl = suggestion['similar_images'][0]['url'] ?? '';
         }
-      }
 
-      _identificationResult = PlantIdentificationResult(
-        plantName: plantName,
-        plantDetails: plantDetails,
-        wikiUrl: wikiUrl,
-        plantImageUrl: plantImageUrl,
-      );
+        // Use common name if available, otherwise use scientific name
+        String displayName = commonName.isNotEmpty ? commonName : scientificName;
+
+        _identificationResult = PlantIdentificationResult(
+          plantName: displayName,
+          plantDetails: plantDetails,
+          wikiUrl: wikiUrl,
+          plantImageUrl: plantImageUrl,
+          scientificName: scientificName,
+          commonName: commonName,
+        );
+      }
     });
+
+    // Check if this plant exists in the user's garden
+    _checkIfPlantExistsInGarden(_identificationResult!.plantName);
   }
 
   void _processHealthResult(dynamic result) {
@@ -479,6 +910,16 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
 
       // Save to Firebase
       _saveAnalysisToFirebase();
+
+      // If plant exists in garden and user didn't choose to add as new plant, update it
+      if (_matchingGardenPlants.isNotEmpty && !_isNewPlant) {
+        for (var plant in _matchingGardenPlants) {
+          _updateGardenPlant(plant['id'], plant);
+        }
+      } else if (_saveToGarden) {
+        // If it's a new plant and user wants to save to garden, add it
+        _addNewPlantToGarden();
+      }
     });
   }
 
@@ -577,12 +1018,16 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
       // ✅ Save to analysis history
       final analysisData = {
         'plantName': _analysisResult?.plantName ?? _identificationResult?.plantName ?? 'Unknown',
+        'scientificName': _identificationResult?.scientificName ?? '',
+        'commonName': _identificationResult?.commonName ?? '',
         'status': isPlantHealthy ? 'Healthy' : 'Needs Attention',
-        'diseases': diseaseDetails, // This will be empty array for healthy plants
+        'diseases': diseaseDetails,
         'imageUrl': _identificationResult?.plantImageUrl ?? '',
         'analysisDate': Timestamp.now(),
         'saveToGarden': _saveToGarden,
-        'isHealthy': isPlantHealthy, // ✅ CRITICAL: Add this field
+        'isHealthy': isPlantHealthy,
+        'note': _plantNote,
+        'improvementPercentage': _improvementPercentage,
       };
 
       await _firestore
@@ -590,29 +1035,6 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
           .doc(user.uid)
           .collection('plantAnalysisHistory')
           .add(analysisData);
-
-      // ✅ If user wants to save to garden
-      if (_saveToGarden && _identificationResult != null) {
-        final gardenData = {
-          'plantName': _identificationResult!.plantName,
-          'plantDetails': _identificationResult!.plantDetails,
-          'imageUrl': _identificationResult!.plantImageUrl,
-          'addedDate': Timestamp.now(),
-          'healthStatus': isPlantHealthy ? 'Healthy' : 'Needs Attention',
-          'lastAnalysisDate': Timestamp.now(),
-          'diseases': diseaseDetails, // ✅ This will be empty for healthy plants
-          'isHealthy': isPlantHealthy, // ✅ CRITICAL: This field must be added
-        };
-
-        print('💾 Saving to garden - isHealthy: $isPlantHealthy');
-        print('💾 Diseases count: ${diseaseDetails.length}');
-
-        await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('garden')
-            .add(gardenData);
-      }
 
       if (widget.onAnalysisComplete != null) {
         widget.onAnalysisComplete!();
@@ -646,6 +1068,22 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
+              // API Key Indicator (optional)
+              // if (apiKeys.length > 1)
+              //   Container(
+              //     padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              //     decoration: BoxDecoration(
+              //       color: Colors.grey[200],
+              //       borderRadius: BorderRadius.circular(8),
+              //     ),
+              //     child: Text(
+              //       'Using API Key ${_currentApiKeyIndex + 1} of ${apiKeys.length}',
+              //       style: const TextStyle(fontSize: 12, color: Colors.grey),
+              //     ),
+              //   ),
+              //
+              // const SizedBox(height: 8),
+
               // Upload Section
               Card(
                 elevation: 4,
@@ -711,6 +1149,45 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
 
               const SizedBox(height: 20),
 
+              // Plant Note Input (shown when plant is identified)
+              if (_identificationResult != null && _analysisResult == null)
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Add a note about this plant (optional)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _noteController,
+                          decoration: InputDecoration(
+                            hintText: 'e.g., Indoor plant, Living room, Backyard, etc.',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              _plantNote = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 20),
+
               // Loading Indicator
               if (_isLoading)
                 Column(
@@ -720,6 +1197,19 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
                     Text(
                       _analysisResult == null ? 'Identifying plant...' : 'Analyzing health...',
                       style: TextStyle(color: primaryColor, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+
+              // Checking Garden Indicator
+              if (_isCheckingGarden)
+                Column(
+                  children: [
+                    CircularProgressIndicator(color: primaryColor),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Checking if plant exists in your garden...',
+                      style: TextStyle(color: Colors.grey),
                     ),
                   ],
                 ),
@@ -746,9 +1236,105 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
                   ),
                 ),
 
-              // Save to Garden Checkbox (shown only when we have identification but before analysis)
-// Save to Garden Checkbox and Identification Result
-              if (_identificationResult != null && _analysisResult == null)
+              // Garden Update Notification
+              if (_showGardenUpdateNotification)
+                Card(
+                  color: Colors.green[50],
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle, color: Colors.green),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Plant information updated in your garden! ${_improvementPercentage != 0 ? 'Improvement: ${_improvementPercentage.toStringAsFixed(1)}%' : ''}',
+                            style: const TextStyle(color: Colors.green),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Plant already in garden notification
+              if (_matchingGardenPlants.isNotEmpty && _identificationResult != null && _analysisResult == null)
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.info, color: primaryColor),
+                            SizedBox(width: 8),
+                            Text(
+                              'Plant Already in Your Garden',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'This plant appears to already exist in your garden. What would you like to do?',
+                          style: TextStyle(color: Colors.grey[700]),
+                        ),
+                        SizedBox(height: 16),
+                        Column(
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                // Sync with existing plant
+                                setState(() {
+                                  _saveToGarden = true;
+                                  _isNewPlant = false;
+                                });
+                                _detectDiseases();
+                              },
+                              icon: Icon(Icons.sync),
+                              label: Text('Proceed & Sync with existing plant'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryColor,
+                                foregroundColor: Colors.white,
+                                minimumSize: Size(double.infinity, 50),
+                              ),
+                            ),
+                            SizedBox(height: 10),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                // Add as new plant
+                                setState(() {
+                                  _matchingGardenPlants = [];
+                                  _saveToGarden = true;
+                                  _isNewPlant = true;
+                                });
+                                _detectDiseases();
+                              },
+                              icon: Icon(Icons.add),
+                              label: Text('Add as new plant'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: primaryColor,
+                                side: BorderSide(color: primaryColor),
+                                minimumSize: Size(double.infinity, 50),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Save to Garden Checkbox (shown only when we have identification but before analysis and plant is NOT in garden)
+              if (_identificationResult != null && _analysisResult == null && _matchingGardenPlants.isEmpty)
                 Column(
                   children: [
                     Card(
@@ -781,7 +1367,7 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16), // Add some spacing
+                    const SizedBox(height: 16),
                     _buildIdentificationCard(),
                   ],
                 ),
@@ -881,6 +1467,21 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
+                    // Show scientific name if different from common name
+                    if (_identificationResult!.scientificName.isNotEmpty &&
+                        _identificationResult!.scientificName != _identificationResult!.plantName)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          _identificationResult!.scientificName,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.grey[600],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -964,6 +1565,21 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      // Show scientific name if different from common name
+                      if (_identificationResult != null &&
+                          _identificationResult!.scientificName.isNotEmpty &&
+                          _identificationResult!.scientificName != _analysisResult!.plantName)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            _identificationResult!.scientificName,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -974,12 +1590,22 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
                         child: Text(
                           _analysisResult!.isHealthy ? 'HEALTHY' : 'NEEDS ATTENTION',
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold
                           ),
                         ),
                       ),
+                      if (_plantNote.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Note: $_plantNote',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1005,7 +1631,11 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Analysis saved to your history',
+                  _matchingGardenPlants.isNotEmpty && !_isNewPlant
+                      ? 'Plant information updated in your garden! ${_improvementPercentage != 0 ? 'Improvement: ${_improvementPercentage.toStringAsFixed(1)}%' : ''}'
+                      : _saveToGarden
+                      ? 'Plant added to your garden successfully!'
+                      : 'Analysis saved to your history',
                   style: TextStyle(
                     color: primaryColor,
                     fontWeight: FontWeight.w500,
@@ -1025,7 +1655,11 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
                 ..._analysisResult!.diseases.map((disease) => _buildDiseaseInfo(disease)),
                 const SizedBox(height: 16),
                 Text(
-                  'Analysis saved to your history',
+                  _matchingGardenPlants.isNotEmpty && !_isNewPlant
+                      ? 'Plant information updated in your garden! ${_improvementPercentage != 0 ? 'Improvement: ${_improvementPercentage.toStringAsFixed(1)}%' : ''}'
+                      : _saveToGarden
+                      ? 'Plant added to your garden successfully!'
+                      : 'Analysis saved to your history',
                   style: TextStyle(
                     color: primaryColor,
                     fontWeight: FontWeight.w500,
@@ -1149,12 +1783,16 @@ class PlantIdentificationResult {
   final String plantDetails;
   final String wikiUrl;
   final String plantImageUrl;
+  final String scientificName;
+  final String commonName;
 
   PlantIdentificationResult({
     required this.plantName,
     required this.plantDetails,
     required this.wikiUrl,
     required this.plantImageUrl,
+    this.scientificName = '',
+    this.commonName = '',
   });
 }
 

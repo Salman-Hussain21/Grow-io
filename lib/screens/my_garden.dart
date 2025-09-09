@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vision2025/screens/plant_details.dart';
-import '../model/garden_model.dart'; // Adjust path as needed
+import '../model/garden_model.dart';
 
 class MyGardenScreen extends StatefulWidget {
   const MyGardenScreen({super.key});
@@ -18,7 +18,7 @@ class _MyGardenScreenState extends State<MyGardenScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-     body: Container(
+      body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -173,6 +173,8 @@ class _MyGardenScreenState extends State<MyGardenScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
+
+                      // Health Status Badge
                       Row(
                         children: [
                           Container(
@@ -191,12 +193,92 @@ class _MyGardenScreenState extends State<MyGardenScreen> {
                               ),
                             ),
                           ),
+
+                          // Improvement Percentage Badge (if available)
+                          if (plant.improvementPercentage != null && plant.improvementPercentage != 0)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: plant.improvementPercentage! > 0
+                                      ? Colors.green.withOpacity(0.1)
+                                      : Colors.orange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: plant.improvementPercentage! > 0
+                                        ? Colors.green
+                                        : Colors.orange,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      plant.improvementPercentage! > 0
+                                          ? Icons.trending_up
+                                          : Icons.trending_down,
+                                      size: 14,
+                                      color: plant.improvementPercentage! > 0
+                                          ? Colors.green
+                                          : Colors.orange,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${plant.improvementPercentage!.toStringAsFixed(0)}%',
+                                      style: TextStyle(
+                                        color: plant.improvementPercentage! > 0
+                                            ? Colors.green
+                                            : Colors.orange,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                         ],
                       ),
+
                       const SizedBox(height: 4),
+
+                      // Note Badge (if available)
+                      if (plant.note != null && plant.note!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.blue),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.note, size: 12, color: Colors.blue),
+                                const SizedBox(width: 4),
+                                Text(
+                                  plant.note!,
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 4),
+
+                      // Last Checked Date
                       Text(
-                        'Added: ${_formatDate(plant.addedDate)}',
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        'Last checked: ${_formatDateTime(plant.lastAnalysisDate)}',
+                        style: const TextStyle(color: Colors.grey, fontSize: 11),
                       ),
                     ],
                   ),
@@ -212,7 +294,6 @@ class _MyGardenScreenState extends State<MyGardenScreen> {
     );
   }
 
-// Add this method to handle plant removal
   void _removePlantFromGarden(String plantId) async {
     try {
       final user = _auth.currentUser;
@@ -262,5 +343,10 @@ class _MyGardenScreenState extends State<MyGardenScreen> {
   String _formatDate(Timestamp timestamp) {
     final date = timestamp.toDate();
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _formatDateTime(Timestamp timestamp) {
+    final date = timestamp.toDate();
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 }

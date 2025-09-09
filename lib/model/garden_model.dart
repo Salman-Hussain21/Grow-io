@@ -9,7 +9,9 @@ class GardenPlant {
   final Timestamp addedDate;
   final Timestamp lastAnalysisDate;
   final List<Map<String, dynamic>> diseases;
-  final bool isHealthy; // Add this
+  final bool isHealthy;
+  final String? note;
+  final double? improvementPercentage;
 
   GardenPlant({
     required this.id,
@@ -20,13 +22,15 @@ class GardenPlant {
     required this.addedDate,
     required this.lastAnalysisDate,
     required this.diseases,
-    required this.isHealthy, // Add this
+    required this.isHealthy,
+    this.note,
+    this.improvementPercentage,
   });
 
   factory GardenPlant.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
-    // ✅ Handle missing isHealthy field by checking healthStatus
+    // Handle missing isHealthy field by checking healthStatus
     bool isHealthy;
     if (data['isHealthy'] != null) {
       isHealthy = data['isHealthy'];
@@ -44,7 +48,9 @@ class GardenPlant {
       addedDate: data['addedDate'] ?? Timestamp.now(),
       lastAnalysisDate: data['lastAnalysisDate'] ?? Timestamp.now(),
       diseases: (data['diseases'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [],
-      isHealthy: isHealthy, // ✅ Use the calculated value
+      isHealthy: isHealthy,
+      note: data['note'],
+      improvementPercentage: data['improvementPercentage']?.toDouble(),
     );
   }
 }
