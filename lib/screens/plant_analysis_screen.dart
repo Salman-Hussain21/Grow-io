@@ -327,7 +327,55 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
     }
   }
 
+  // Add this method to check if the identified result is actually a plant
+  bool _isValidPlant(dynamic result) {
+    if (result['result'] == null) return false;
+
+    // Check if we have classification suggestions
+    if (result['result']['classification'] != null &&
+        result['result']['classification']['suggestions'] != null &&
+        result['result']['classification']['suggestions'].isNotEmpty) {
+
+      final suggestion = result['result']['classification']['suggestions'][0];
+      final probability = suggestion['probability']?.toDouble() ?? 0.0;
+      final name = suggestion['name'] ?? '';
+
+      // If probability is too low or name suggests non-plant content
+      if (probability < 0.3) return false;
+
+      // Check for common non-plant labels
+      final List<String> nonPlantKeywords = [
+        'animal', 'human', 'person', 'face', 'car', 'vehicle', 'building',
+        'house', 'food', 'fruit', 'vegetable', 'object', 'machine', 'device',
+        'electronic', 'furniture', 'cloth', 'fabric', 'sky', 'cloud', 'water',
+        'ocean', 'sea', 'river', 'lake', 'mountain', 'rock', 'stone'
+      ];
+
+      final lowerCaseName = name.toLowerCase();
+      for (var keyword in nonPlantKeywords) {
+        if (lowerCaseName.contains(keyword)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
+
   void _processIdentificationResult(dynamic result) {
+    // First check if this is actually a plant
+    if (!_isValidPlant(result)) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = "Kindly upload a valid plant image. The uploaded image doesn't appear to contain a plant.";
+        _selectedImage = null; // Clear the selected image
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = false;
 
@@ -378,6 +426,16 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
 
   void _processHealthResult(dynamic result) {
     print('Full Health API Response: ${jsonEncode(result)}');
+
+    // First check if this is actually a plant
+    if (!_isValidPlant(result)) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = "Kindly upload a valid plant image. The uploaded image doesn't appear to contain a plant.";
+        _selectedImage = null; // Clear the selected image
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = false;
