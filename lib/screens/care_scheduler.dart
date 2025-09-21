@@ -1,22 +1,22 @@
-// screens/care_schedule_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:iconsax/iconsax.dart';
 import '../model/garden_model.dart';
 import '../services/perenual_service.dart';
-import '../model/garden_model.dart';
+import '../utils/app_colors.dart';
 
-class CareScheduleScreen extends StatefulWidget {
-  const CareScheduleScreen({super.key});
+class GreenGuidePage extends StatefulWidget {
+  const GreenGuidePage({super.key});
 
   @override
-  State<CareScheduleScreen> createState() => _CareScheduleScreenState();
+  State<GreenGuidePage> createState() => _GreenGuidePageState();
 }
 
-class _CareScheduleScreenState extends State<CareScheduleScreen> {
+class _GreenGuidePageState extends State<GreenGuidePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final Color primaryColor = const Color(0xFF4CAF50);
+  final Color primaryColor = AppColors.primaryGreen;
 
   Map<String, Map<String, dynamic>> _careSchedules = {};
   bool _isLoading = true;
@@ -101,14 +101,14 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.white,
       appBar: AppBar(
-        title: const Text(
-            'Green Guide', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        title: const Text('Green Guide', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.white,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Iconsax.refresh, color: AppColors.primaryGreen),
             onPressed: _loadGardenAndSchedules,
           ),
         ],
@@ -120,12 +120,9 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
           : _careSchedules.isEmpty
           ? _buildEmptyState()
           : _buildCareScheduleList(),
+      bottomNavigationBar: _buildBottomAppBar(context),
     );
   }
-
-  // ... (Keep all the UI builder methods exactly the same as before)
-  // _buildErrorState(), _buildEmptyState(), _buildCareScheduleList(),
-  // _buildPlantScheduleCard(), _buildScheduleItem() all remain unchanged
 
   Widget _buildErrorState() {
     return Center(
@@ -148,6 +145,10 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _loadGardenAndSchedules,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Try Again'),
           ),
         ],
@@ -160,7 +161,7 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.eco, size: 64, color: Colors.grey),
+          const Icon(Iconsax.tree, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
           const Text(
             'No Plants in Garden',
@@ -175,6 +176,10 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Add Plants to Garden'),
           ),
         ],
@@ -188,8 +193,12 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'Plant’s guide to grow happy and healthy',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            'Plant\'s guide to grow happy and healthy',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textBlack,
+            ),
           ),
         ),
         Expanded(
@@ -207,8 +216,9 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
   Widget _buildPlantScheduleCard(String plantName,
       Map<String, dynamic> schedule) {
     return Card(
-      elevation: 3,
+      elevation: 2,
       margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -216,13 +226,13 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
           children: [
             Text(
               plantName,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
             // Watering Schedule - WITH NULL SAFETY
             _buildScheduleItem(
-              icon: Icons.water_drop,
+              icon: Iconsax.drop,
               title: 'Watering',
               subtitle: 'Every ${schedule['watering']?['frequency_days']
                   ?.toString() ?? '7'} days',
@@ -232,7 +242,7 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
 
             // Light Requirements - WITH NULL SAFETY
             _buildScheduleItem(
-              icon: Icons.light_mode,
+              icon: Iconsax.sun_1,
               title: 'Light',
               subtitle: schedule['light']?['requirement']?.toString() ??
                   'Bright indirect light',
@@ -252,7 +262,7 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
 
             // Fertilizing - WITH NULL SAFETY
             _buildScheduleItem(
-              icon: Icons.eco,
+              icon: Icons.thermostat,
               title: 'Fertilizing',
               subtitle: schedule['fertilizing']?['frequency']?.toString() ??
                   'Every 4-6 weeks',
@@ -263,7 +273,7 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
             // Pruning - WITH NULL SAFETY
             if (schedule['pruning'] != null)
               _buildScheduleItem(
-                icon: Icons.content_cut,
+                icon: Iconsax.scissor,
                 title: 'Pruning',
                 subtitle: schedule['pruning']?['frequency']?.toString() ??
                     'As needed',
@@ -287,7 +297,7 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 24, color: primaryColor),
+          Icon(icon, size: 20, color: AppColors.primaryGreen),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -295,17 +305,111 @@ class _CareScheduleScreenState extends State<CareScheduleScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(color: Colors.grey[700]),
+                  style: TextStyle(color: AppColors.textGrey),
                 ),
                 Text(
                   description,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  style: TextStyle(color: AppColors.textGrey, fontSize: 12),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomAppBar(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: BottomAppBar(
+        color: Colors.white,
+        height: 70,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(Iconsax.home, 'Home', false, () {
+              Navigator.pushNamed(context, '/home');
+            }),
+            _buildNavItem(Iconsax.tree, 'Garden', false, () {
+              Navigator.pushNamed(context, '/my_garden');
+            }),
+            // Diagnose Button (Center)
+            Container(
+              margin: const EdgeInsets.only(bottom: 25),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/scan_result');
+                },
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.primaryGreen,
+                        Color(0xFF2E8B57),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryGreen.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Iconsax.scan_barcode,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ),
+            ),
+            _buildNavItem(Iconsax.people, 'Community', false, () {
+              Navigator.pushNamed(context, '/community');
+            }),
+            _buildNavItem(Iconsax.book, 'Guide', true, () {}),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isActive ? AppColors.primaryGreen : AppColors.textBlack.withOpacity(0.5),
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isActive ? AppColors.primaryGreen : AppColors.textBlack.withOpacity(0.5),
             ),
           ),
         ],

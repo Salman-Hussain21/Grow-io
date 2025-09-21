@@ -1,10 +1,11 @@
 // screens/chat_screen.dart
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:iconsax/iconsax.dart';
 import '../services/growbot_service.dart';
 import '../model/chat_message.dart';
+import '../utils/app_colors.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -144,14 +145,16 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.white,
       appBar: AppBar(
-        title: const Text('GrowBot 🌱'),
-        backgroundColor: Colors.green[700],
-        foregroundColor: Colors.white,
+        title: const Text('GrowBot 🌱', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.white,
+        foregroundColor: AppColors.textBlack,
+        elevation: 0,
         actions: [
           if (_messages.length > 1)
             IconButton(
-              icon: const Icon(Icons.delete),
+              icon: const Icon(Iconsax.trash),
               onPressed: _clearChat,
               tooltip: 'Clear chat',
             ),
@@ -166,7 +169,11 @@ class _ChatScreenState extends State<ChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final message = _messages[index];
-                return _buildMessageBubble(message);
+                return ChatBubble(
+                  text: message.text,
+                  isBot: !message.isUser,
+                  timestamp: message.timestamp,
+                );
               },
             ),
           ),
@@ -176,95 +183,98 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!message.isUser)
-            Container(
-              margin: const EdgeInsets.only(right: 8, top: 4),
-              child: CircleAvatar(
-                backgroundColor: Colors.green[700],
-                radius: 16,
-                child: const Text('🌱', style: TextStyle(fontSize: 12)),
-              ),
-            ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: message.isUser ? Colors.green[100] : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    message.text,
-                    style: TextStyle(
-                      color: message.isUser ? Colors.green[900] : Colors.grey[900],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _formatTime(message.timestamp),
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-          if (message.isUser)
-            Container(
-              margin: const EdgeInsets.only(left: 8, top: 4),
-              child: const CircleAvatar(
-                backgroundColor: Colors.blue,
-                radius: 16,
-                child: Icon(Icons.person, size: 16, color: Colors.white),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildInputField() {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[300]!)),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color: AppColors.white,
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _messageController,
               decoration: InputDecoration(
-                hintText: 'Ask about plant care...',
+                hintText: 'Type a message...',
+                filled: true,
+                fillColor: AppColors.cardBackground,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
               onSubmitted: (_) => _sendMessage(),
             ),
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: _isLoading
-                ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-                : const Icon(Icons.send),
-            onPressed: _isLoading ? null : _sendMessage,
-            color: Colors.green[700],
-          ),
+          const SizedBox(width: 12),
+          CircleAvatar(
+            backgroundColor: AppColors.primaryGreen,
+            child: IconButton(
+              icon: _isLoading
+                  ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                ),
+              )
+                  : const Icon(Iconsax.send_1, color: AppColors.white, size: 20),
+              onPressed: _isLoading ? null : _sendMessage,
+            ),
+          )
         ],
+      ),
+    );
+  }
+}
+
+class ChatBubble extends StatelessWidget {
+  final String text;
+  final bool isBot;
+  final DateTime timestamp;
+
+  const ChatBubble({
+    super.key,
+    required this.text,
+    required this.isBot,
+    required this.timestamp,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: isBot ? Alignment.centerLeft : Alignment.centerRight,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        child: Column(
+          crossAxisAlignment: isBot ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isBot ? AppColors.cardBackground : AppColors.primaryGreen,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: isBot ? AppColors.textBlack : AppColors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _formatTime(timestamp),
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.textGrey,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

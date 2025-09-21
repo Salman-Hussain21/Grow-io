@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../utils/app_colors.dart';
+import '../../widgets/app_button.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -17,8 +19,6 @@ class _SignupScreenState extends State<SignupScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  final Color primaryColor = const Color(0xFF4CAF50);
-  final Color backgroundColor = const Color(0xFFF9FBE7);
 
   @override
   void initState() {
@@ -62,45 +62,34 @@ class _SignupScreenState extends State<SignupScreen> {
     final authService = Provider.of<AuthService>(context);
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: AppColors.white,
       appBar: AppBar(
+        backgroundColor: AppColors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: primaryColor),
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textBlack),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
       ),
       body: authService.isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // App Logo/Icon
-    
-              // Welcome text
+              const SizedBox(height: 20),
               const Text(
-                'Create an account',
+                'Sign Up',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF33691E),
+                  color: AppColors.textBlack,
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Join our plant-loving community',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
 
               // Error message
               if (authService.lastError != null)
@@ -132,18 +121,14 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: _nameController,
                 decoration: InputDecoration(
                   labelText: 'Full Name',
-                  labelStyle: TextStyle(color: Colors.grey.shade600),
-                  prefixIcon: Icon(Icons.person_outline, color: primaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: const BorderSide(color: AppColors.textGrey),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: primaryColor, width: 1.5),
+                    borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
                   ),
-                  filled: true,
-                  fillColor: Colors.white,
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -163,18 +148,14 @@ class _SignupScreenState extends State<SignupScreen> {
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
                   labelText: 'Email',
-                  labelStyle: TextStyle(color: Colors.grey.shade600),
-                  prefixIcon: Icon(Icons.email_outlined, color: primaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: const BorderSide(color: AppColors.textGrey),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: primaryColor, width: 1.5),
+                    borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
                   ),
-                  filled: true,
-                  fillColor: Colors.white,
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -194,22 +175,18 @@ class _SignupScreenState extends State<SignupScreen> {
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   labelText: 'Password',
-                  labelStyle: TextStyle(color: Colors.grey.shade600),
-                  prefixIcon: Icon(Icons.lock_outline, color: primaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: const BorderSide(color: AppColors.textGrey),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: primaryColor, width: 1.5),
+                    borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
                   ),
-                  filled: true,
-                  fillColor: Colors.white,
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                      color: Colors.grey.shade500,
+                      color: AppColors.textGrey,
                     ),
                     onPressed: () {
                       setState(() {
@@ -236,22 +213,18 @@ class _SignupScreenState extends State<SignupScreen> {
                 obscureText: _obscureConfirmPassword,
                 decoration: InputDecoration(
                   labelText: 'Confirm Password',
-                  labelStyle: TextStyle(color: Colors.grey.shade600),
-                  prefixIcon: Icon(Icons.lock_outline, color: primaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: const BorderSide(color: AppColors.textGrey),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: primaryColor, width: 1.5),
+                    borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
                   ),
-                  filled: true,
-                  fillColor: Colors.white,
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                      color: Colors.grey.shade500,
+                      color: AppColors.textGrey,
                     ),
                     onPressed: () {
                       setState(() {
@@ -270,29 +243,13 @@ class _SignupScreenState extends State<SignupScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 40),
 
               // Sign Up Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _signUpWithEmail,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Create Account',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ),
+              AppButton(
+                text: 'Create Account',
+                onPressed: _signUpWithEmail,
               ),
-
               const SizedBox(height: 30),
 
               // Sign In Link
@@ -300,19 +257,19 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
+                    const Text(
                       "Already have an account?",
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(color: AppColors.textGrey),
                     ),
                     const SizedBox(width: 4),
                     TextButton(
                       onPressed: () {
                         Navigator.pushReplacementNamed(context, '/login');
                       },
-                      child: Text(
+                      child: const Text(
                         'Sign In',
                         style: TextStyle(
-                          color: primaryColor,
+                          color: AppColors.primaryGreen,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -320,6 +277,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

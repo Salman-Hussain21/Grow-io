@@ -4,7 +4,9 @@ import '../services/auth_service.dart';
 import 'auth/login_screen.dart';
 import 'auth/signup_screen.dart';
 import 'guest_home_screen.dart';
-import 'home_screen.dart'; // Make sure to import your HomeScreen
+import 'home_screen.dart';
+import '../utils/app_colors.dart';
+import '../widgets/app_button.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -51,56 +53,38 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.teal.shade700,
-              Colors.green.shade800,
-              Colors.green.shade600,
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ),
-        ),
+      body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Spacer(),
+              const Spacer(flex: 2),
               ScaleTransition(
                 scale: _animation,
                 child: Column(
                   children: [
+                    // Using the plant icon from the original code
                     Icon(
                       Icons.local_florist,
                       size: 100,
-                      color: Colors.white.withOpacity(0.9),
+                      color: AppColors.primaryGreen,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     const Text(
-                      'Growio',
-                      style: TextStyle(
-                        fontSize: 42,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Your Plant Health Companion',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white.withOpacity(0.9),
-                        fontWeight: FontWeight.w500,
-                      ),
+                      'Know Your Plant,\nGrow Your Plant',
                       textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Poppins', // Added Poppins font
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textBlack,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Spacer(),
+              const Spacer(flex: 3),
               FadeTransition(
                 opacity: _animation,
                 child: SlideTransition(
@@ -112,32 +96,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                     children: [
                       if (_isLoggedIn) ...[
                         // Show "Go to Home" button if user is logged in
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (context) => const HomeScreen()),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.teal.shade800,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 4,
-                            ),
-                            child: const Text(
-                              'Continue to the app',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                        AppButton(
+                          text: 'Continue to the app',
+                          onPressed: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const HomeScreen()),
+                            );
+                          },
+                          isPrimary: true,
                         ),
                         const SizedBox(height: 16),
                         SizedBox(
@@ -151,17 +118,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               });
                             },
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
+                              foregroundColor: AppColors.textGrey,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              side: const BorderSide(color: Colors.white),
+                              side: BorderSide(color: AppColors.textGrey.withOpacity(0.5)),
                             ),
                             child: const Text(
                               'Sign Out',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontFamily: 'Poppins', // Added Poppins font
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -169,61 +137,28 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                         ),
                       ] else ...[
                         // Show sign up/sign in buttons if user is not logged in
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const SignupScreen()),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.teal.shade800,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 4,
-                            ),
-                            child: const Text(
-                              'Create Account',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                        AppButton(
+                          text: 'Login',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const LoginScreen()),
+                            );
+                          },
+                          isPrimary: true,
                         ),
                         const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                              );
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              side: const BorderSide(color: Colors.white),
-                            ),
-                            child: const Text(
-                              'Sign In',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                        AppButton(
+                          text: 'Sign up',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const SignupScreen()),
+                            );
+                          },
+                          isPrimary: false,
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
                         TextButton(
                           onPressed: () {
                             Navigator.pushReplacement(
@@ -231,12 +166,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               MaterialPageRoute(builder: (context) => const HomeScreen()),
                             );
                           },
-                          child: Text(
+                          child: const Text(
                             'Continue as Guest',
                             style: TextStyle(
+                              fontFamily: 'Poppins', // Added Poppins font
+                              color: AppColors.textGrey,
                               fontSize: 16,
-                              color: Colors.white.withOpacity(0.9),
-                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
@@ -245,7 +180,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                   ),
                 ),
               ),
-              const SizedBox(height: 40),
+              const Spacer(flex: 1),
             ],
           ),
         ),

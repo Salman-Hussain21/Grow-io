@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '/utils/app_colors.dart';
+import '/widgets/app_button.dart';
 
 class ConfirmEmailScreen extends StatelessWidget {
   final String email;
@@ -7,13 +9,18 @@ class ConfirmEmailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = const Color(0xFF4CAF50);
-    final backgroundColor = const Color(0xFFF9FBE7);
-
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: AppColors.white,
+      appBar: AppBar(
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textBlack),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -22,13 +29,13 @@ class ConfirmEmailScreen extends StatelessWidget {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
+                color: AppColors.primaryGreen.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.email_outlined,
                 size: 50,
-                color: primaryColor,
+                color: AppColors.primaryGreen,
               ),
             ),
 
@@ -40,7 +47,7 @@ class ConfirmEmailScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF33691E),
+                color: AppColors.textBlack,
               ),
               textAlign: TextAlign.center,
             ),
@@ -52,7 +59,7 @@ class ConfirmEmailScreen extends StatelessWidget {
               'We\'ve sent a confirmation email to:',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey.shade600,
+                color: AppColors.textGrey,
               ),
               textAlign: TextAlign.center,
             ),
@@ -65,7 +72,7 @@ class ConfirmEmailScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: primaryColor,
+                color: AppColors.primaryGreen,
               ),
               textAlign: TextAlign.center,
             ),
@@ -77,7 +84,7 @@ class ConfirmEmailScreen extends StatelessWidget {
               'Please check your inbox and spam folder. Click the verification link in the email to activate your account.',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade600,
+                color: AppColors.textGrey,
               ),
               textAlign: TextAlign.center,
             ),
@@ -85,28 +92,17 @@ class ConfirmEmailScreen extends StatelessWidget {
             const SizedBox(height: 40),
 
             // Resend button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Add resend email functionality
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Confirmation email resent!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            AppButton(
+              text: 'Resend Email',
+              onPressed: () {
+                // Add resend email functionality
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Confirmation email resent!'),
+                    backgroundColor: Colors.green,
                   ),
-                ),
-                child: const Text('Resend Email'),
-              ),
+                );
+              },
             ),
 
             const SizedBox(height: 16),
@@ -118,7 +114,7 @@ class ConfirmEmailScreen extends StatelessWidget {
               },
               child: Text(
                 'Back to Login',
-                style: TextStyle(color: primaryColor),
+                style: TextStyle(color: AppColors.primaryGreen),
               ),
             ),
           ],

@@ -8,6 +8,17 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:iconsax/iconsax.dart';
+
+// App colors to match the HomeScreen
+class AppColors {
+  static const Color primaryGreen = Color(0xFF4CAF50);
+  static const Color textBlack = Color(0xFF212121);
+  static const Color textGrey = Color(0xFF757575);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color cardBackground = Color(0xFFF8F9FA);
+  static const Color beige = Color(0xFFF9FBE7);
+}
 
 class PlantAnalysisScreen extends StatefulWidget {
   const PlantAnalysisScreen({
@@ -22,11 +33,8 @@ class PlantAnalysisScreen extends StatefulWidget {
 }
 
 class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
-  // Multiple API keys for rotation
   final List<String> apiKeys = [
-    // "rkgDlTzrfd8zQjxsHZtpAYQltrnQ0JRBrClvXwdTVRywDBC74c",
-    // "SQutC5nRxs4Srjh4l8eiHRsxLBogHQ6lnRy841LbeIO5kTeJ8n",
-    "claCuW52gD5y7DMHDHsbsXjSzNzr71CferpKbNdh7JxMfF5wF9",
+    // "claCuW52gD5y7DMHDHsbsXjSzNzr71CferpKbNdh7JxMfF5wF9",
     "FWAknG43oYzjSN0MR71hMWGeAmXv5HF3i2QXOeuU3W5V49mouY",
   ];
 
@@ -51,21 +59,13 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
   // Local plant names database
   Map<String, String> _plantCommonNames = {};
 
-  // App colors
-  final Color primaryColor = const Color(0xFF4CAF50);
-  final Color secondaryColor = const Color(0xFF8BC34A);
-  final Color accentColor = const Color(0xFF689F38);
-  final Color backgroundColor = const Color(0xFFF9FBE7);
-  final Color textColor = const Color(0xFF33691E);
-
   @override
   void initState() {
     super.initState();
-    // Load plant names from your text file
     _loadPlantNamesFromText();
   }
 
-// Load plant names from text file
+  // Load plant names from text file
   Future<void> _loadPlantNamesFromText() async {
     try {
       final String content = await rootBundle.loadString('assets/plant_names.txt');
@@ -112,7 +112,7 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
     }
   }
 
-// Parse a CSV line with quotes correctly
+  // Parse a CSV line with quotes correctly
   List<String> _parseCsvLine(String line) {
     final result = <String>[];
     var current = StringBuffer();
@@ -138,7 +138,7 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
     return result;
   }
 
-// Clean scientific name by removing author names and other extras
+  // Clean scientific name by removing author names and other extras
   String _cleanScientificName(String scientificName) {
     // Remove content in parentheses (author names)
     String cleaned = scientificName.replaceAll(RegExp(r'\([^)]*\)'), '');
@@ -155,7 +155,7 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
     return cleaned;
   }
 
-// Get common name from scientific name using local database
+  // Get common name from scientific name using local database
   String _getCommonName(String scientificName) {
     if (scientificName.isEmpty) return '';
 
@@ -215,8 +215,6 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
     print('Available keys: ${_plantCommonNames.keys.where((k) => k.contains("dracaena")).take(10).toList()}');
     return '';
   }
-
-
 
   // Get the current API key
   String get _currentApiKey {
@@ -486,8 +484,13 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
 
       // Check file size
       if (bytes.length > 5 * 1024 * 1024) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Image is too large. Please select a smaller image."),
+            backgroundColor: Colors.red,
+          ),
+        );
         setState(() {
-          _errorMessage = "Image is too large. Please select a smaller image.";
           _isLoading = false;
         });
         return;
@@ -535,6 +538,12 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
           _errorMessage = "API Error: ${response.statusCode}";
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("API Error: ${response.statusCode}"),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (error) {
       setState(() {
@@ -735,22 +744,24 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
 
       final suggestion = result['result']['classification']['suggestions'][0];
       final probability = suggestion['probability']?.toDouble() ?? 0.0;
-      final name = suggestion['name'] ?? '';
+      final name = suggestion['name']?.toString().toLowerCase() ?? '';
 
-      // If probability is too low or name suggests non-plant content
-      if (probability < 0.3) return false;
+      // If probability is too low
+      if (probability < 0.4) return false;
 
-      // Check for common non-plant labels
+      // Check for common non-plant labels with more specific terms
       final List<String> nonPlantKeywords = [
         'animal', 'human', 'person', 'face', 'car', 'vehicle', 'building',
         'house', 'food', 'fruit', 'vegetable', 'object', 'machine', 'device',
         'electronic', 'furniture', 'cloth', 'fabric', 'sky', 'cloud', 'water',
-        'ocean', 'sea', 'river', 'lake', 'mountain', 'rock', 'stone'
+        'ocean', 'sea', 'river', 'lake', 'mountain', 'rock', 'stone', 'road',
+        'street', 'wall', 'floor', 'ceiling', 'window', 'door', 'book', 'paper',
+        'screen', 'phone', 'computer', 'tool', 'instrument', 'metal', 'plastic',
+        'glass', 'wood', 'concrete', 'brick', 'sign', 'logo', 'text', 'writing'
       ];
 
-      final lowerCaseName = name.toLowerCase();
       for (var keyword in nonPlantKeywords) {
-        if (lowerCaseName.contains(keyword)) {
+        if (name.contains(keyword)) {
           return false;
         }
       }
@@ -761,14 +772,18 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
     return false;
   }
 
-
   void _processIdentificationResult(dynamic result) {
     // First check if this is actually a plant
     if (!_isValidPlant(result)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("This doesn't appear to be a plant. Please try a different image or angle."),
+          backgroundColor: Colors.orange,
+        ),
+      );
       setState(() {
         _isLoading = false;
-        _errorMessage = "Kindly upload a valid plant image. The uploaded image doesn't appear to contain a plant.";
-        _selectedImage = null; // Clear the selected image
+        _selectedImage = null;
       });
       return;
     }
@@ -923,7 +938,7 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
     });
   }
 
-// Helper method to extract description
+  // Helper method to extract description
   String _extractDescription(Map<String, dynamic> details) {
     // Try different description field patterns
     if (details['description'] != null) {
@@ -953,7 +968,7 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
     return 'No description available';
   }
 
-// Helper method to extract treatment
+  // Helper method to extract treatment
   String _extractTreatment(Map<String, dynamic> details) {
     // Try treatment information
     if (details['treatment'] != null) {
@@ -1056,617 +1071,244 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [backgroundColor.withOpacity(0.3), Colors.white],
-          ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              // API Key Indicator (optional)
-              // if (apiKeys.length > 1)
-              //   Container(
-              //     padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              //     decoration: BoxDecoration(
-              //       color: Colors.grey[200],
-              //       borderRadius: BorderRadius.circular(8),
-              //     ),
-              //     child: Text(
-              //       'Using API Key ${_currentApiKeyIndex + 1} of ${apiKeys.length}',
-              //       style: const TextStyle(fontSize: 12, color: Colors.grey),
-              //     ),
-              //   ),
-              //
-              // const SizedBox(height: 8),
-
-              // Upload Section
-              Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [primaryColor.withOpacity(0.1), secondaryColor.withOpacity(0.1)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.eco, size: 50, color: Color(0xFF4CAF50)),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Plant Health Analysis',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Upload a photo to identify your plant and detect diseases',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey, fontSize: 14),
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildActionButton(
-                              icon: Icons.camera_alt,
-                              label: 'Take Photo',
-                              onPressed: _takePhoto,
-                              color: primaryColor,
-                            ),
-                            _buildActionButton(
-                              icon: Icons.photo_library,
-                              label: 'From Gallery',
-                              onPressed: _pickImage,
-                              color: secondaryColor,
-                            ),
-                          ],
-                        ),
-                        if (_selectedImage != null) ...[
-                          const SizedBox(height: 20),
-                          _buildImagePreview(),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Selected: ${_selectedImage!.name}',
-                            style: TextStyle(color: primaryColor, fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Plant Note Input (shown when plant is identified)
-              if (_identificationResult != null && _analysisResult == null)
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Add a note about this plant (optional)',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _noteController,
-                          decoration: InputDecoration(
-                            hintText: 'e.g., Indoor plant, Living room, Backyard, etc.',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _plantNote = value;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              const SizedBox(height: 20),
-
-              // Loading Indicator
-              if (_isLoading)
-                Column(
-                  children: [
-                    CircularProgressIndicator(color: primaryColor),
-                    const SizedBox(height: 16),
-                    Text(
-                      _analysisResult == null ? 'Identifying plant...' : 'Analyzing health...',
-                      style: TextStyle(color: primaryColor, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-
-              // Checking Garden Indicator
-              if (_isCheckingGarden)
-                Column(
-                  children: [
-                    CircularProgressIndicator(color: primaryColor),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Checking if plant exists in your garden...',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-
-              // Error Message
-              if (_errorMessage != null)
-                Card(
-                  color: Colors.red[50],
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline, color: Colors.red),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _errorMessage!,
-                            style: const TextStyle(color: Colors.red),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // Garden Update Notification
-              if (_showGardenUpdateNotification)
-                Card(
-                  color: Colors.green[50],
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.check_circle, color: Colors.green),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Plant information updated in your garden! ${_improvementPercentage != 0 ? 'Improvement: ${_improvementPercentage.toStringAsFixed(1)}%' : ''}',
-                            style: const TextStyle(color: Colors.green),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // Plant already in garden notification
-              if (_matchingGardenPlants.isNotEmpty && _identificationResult != null && _analysisResult == null)
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.info, color: primaryColor),
-                            SizedBox(width: 8),
-                            Text(
-                              'Plant Already in Your Garden',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: primaryColor,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          'This plant appears to already exist in your garden. What would you like to do?',
-                          style: TextStyle(color: Colors.grey[700]),
-                        ),
-                        SizedBox(height: 16),
-                        Column(
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                // Sync with existing plant
-                                setState(() {
-                                  _saveToGarden = true;
-                                  _isNewPlant = false;
-                                });
-                                _detectDiseases();
-                              },
-                              icon: Icon(Icons.sync),
-                              label: Text('Proceed & Sync with existing plant'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
-                                foregroundColor: Colors.white,
-                                minimumSize: Size(double.infinity, 50),
-                              ),
-                            ),
-                            SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              onPressed: () {
-                                // Add as new plant
-                                setState(() {
-                                  _matchingGardenPlants = [];
-                                  _saveToGarden = true;
-                                  _isNewPlant = true;
-                                });
-                                _detectDiseases();
-                              },
-                              icon: Icon(Icons.add),
-                              label: Text('Add as new plant'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: primaryColor,
-                                side: BorderSide(color: primaryColor),
-                                minimumSize: Size(double.infinity, 50),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // Save to Garden Checkbox (shown only when we have identification but before analysis and plant is NOT in garden)
-              if (_identificationResult != null && _analysisResult == null && _matchingGardenPlants.isEmpty)
-                Column(
-                  children: [
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          children: [
-                            Checkbox(
-                              value: _saveToGarden,
-                              onChanged: (value) {
-                                setState(() {
-                                  _saveToGarden = value ?? false;
-                                });
-                              },
-                              activeColor: primaryColor,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Save this plant to my garden',
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildIdentificationCard(),
-                  ],
-                ),
-
-// Analysis Result
-              if (_analysisResult != null)
-                _buildAnalysisResultCard(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    required Color color,
-  }) {
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(icon, color: Colors.white),
-            onPressed: onPressed,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
+      appBar: AppBar(
+        title: const Text(
+          'Plant Analysis',
           style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
+            color: AppColors.textBlack,
+            fontWeight: FontWeight.bold,
           ),
         ),
-      ],
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Iconsax.arrow_left, color: AppColors.textBlack),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          if (_analysisResult != null)
+            IconButton(
+              icon: const Icon(Iconsax.refresh, color: AppColors.textBlack),
+              onPressed: () {
+                setState(() {
+                  _selectedImage = null;
+                  _identificationResult = null;
+                  _analysisResult = null;
+                  _errorMessage = null;
+                });
+              },
+            ),
+        ],
+      ),
+      body: _buildContent(),
     );
   }
 
-  Widget _buildIdentificationCard() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.verified, color: Colors.green),
-                const SizedBox(width: 8),
-                const Text(
-                  'Plant Identified',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ],
+  Widget _buildContent() {
+    if (_analysisResult != null) {
+      return _buildAnalysisResult();
+    } else if (_identificationResult != null) {
+      return _buildIdentificationResult();
+    } else if (_selectedImage != null && _isLoading) {
+      return _buildLoadingState();
+    } else {
+      return _buildUploadSection();
+    }
+  }
+
+  Widget _buildUploadSection() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header
+          const Text(
+            'Plant Health Analysis',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textBlack,
             ),
-            const SizedBox(height: 16),
-            // Changed from Row to Column to prevent overflow
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                if (_identificationResult!.plantImageUrl.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.network(
-                      _identificationResult!.plantImageUrl,
-                      width: 140,
-                      height: 140,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      _identificationResult!.plantName,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    // Show scientific name if different from common name
-                    if (_identificationResult!.scientificName.isNotEmpty &&
-                        _identificationResult!.scientificName != _identificationResult!.plantName)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Text(
-                          _identificationResult!.scientificName,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontStyle: FontStyle.italic,
-                            color: Colors.grey[600],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: backgroundColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _identificationResult!.plantDetails,
-                        style: const TextStyle(fontSize: 14),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Upload a photo to identify your plant and detect diseases',
+            style: TextStyle(
+              color: AppColors.textGrey,
+              fontSize: 14,
             ),
-            const SizedBox(height: 20),
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: _detectDiseases,
-                icon: const Icon(Icons.health_and_safety),
-                label: const Text('Check Plant Health'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          const SizedBox(height: 32),
+
+          // Scan Card
+          GestureDetector(
+            onTap: _showImageSourceDialog,
+            child: Container(
+              height: 200,
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppColors.primaryGreen.withOpacity(0.3),
+                  width: 2,
                 ),
               ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Iconsax.camera,
+                    size: 48,
+                    color: AppColors.primaryGreen,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Tap to Scan Plant',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryGreen,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Take a photo or choose from gallery',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textGrey,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 24),
+
+          // Features Grid
+          const Text(
+            'What you can do:',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textBlack,
+            ),
+          ),
+          const SizedBox(height: 16),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 1.5,
+            children: [
+              _buildFeatureItem(
+                icon: Iconsax.health,
+                title: 'Disease Detection',
+                subtitle: 'Identify plant diseases',
+              ),
+              _buildFeatureItem(
+                icon: Iconsax.info_circle,
+                title: 'Plant Identification',
+                subtitle: 'Recognize plant species',
+              ),
+              _buildFeatureItem(
+                icon: Iconsax.lamp_charge,
+                title: 'Care Tips',
+                subtitle: 'Get expert advice',
+              ),
+              _buildFeatureItem(
+                icon: Iconsax.save_2,
+                title: 'Save to Garden',
+                subtitle: 'Track your plants',
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildAnalysisResultCard() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  Widget _buildFeatureItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 24, color: AppColors.primaryGreen),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textGrey,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: _analysisResult!.isHealthy
-                    ? [Colors.green.shade600, Colors.green.shade400]
-                    : [Colors.orange.shade600, Colors.orange.shade400],
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
+              color: AppColors.primaryGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(40),
             ),
-            child: Row(
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                    _analysisResult!.isHealthy ? Icons.check_circle : Icons.warning,
-                    color: _analysisResult!.isHealthy ? Colors.green : Colors.orange,
-                    size: 36,
-                  ),
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
+                  strokeWidth: 3,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _analysisResult!.plantName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      // Show scientific name if different from common name
-                      if (_identificationResult != null &&
-                          _identificationResult!.scientificName.isNotEmpty &&
-                          _identificationResult!.scientificName != _analysisResult!.plantName)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(
-                            _identificationResult!.scientificName,
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _analysisResult!.isHealthy ? 'HEALTHY' : 'NEEDS ATTENTION',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold
-                          ),
-                        ),
-                      ),
-                      if (_plantNote.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Note: $_plantNote',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                Icon(
+                  Icons.energy_savings_leaf,
+                  size: 32,
+                  color: AppColors.primaryGreen,
                 ),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: _analysisResult!.isHealthy
-                ? Column(
-              children: [
-                Icon(Icons.emoji_emotions, size: 60, color: primaryColor),
-                const SizedBox(height: 16),
-                const Text(
-                  'Your plant is healthy!',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'No diseases detected. Keep up the good care!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  _matchingGardenPlants.isNotEmpty && !_isNewPlant
-                      ? 'Plant information updated in your garden! ${_improvementPercentage != 0 ? 'Improvement: ${_improvementPercentage.toStringAsFixed(1)}%' : ''}'
-                      : _saveToGarden
-                      ? 'Plant added to your garden successfully!'
-                      : 'Analysis saved to your history',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            )
-                : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Detected Issues',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                ..._analysisResult!.diseases.map((disease) => _buildDiseaseInfo(disease)),
-                const SizedBox(height: 16),
-                Text(
-                  _matchingGardenPlants.isNotEmpty && !_isNewPlant
-                      ? 'Plant information updated in your garden! ${_improvementPercentage != 0 ? 'Improvement: ${_improvementPercentage.toStringAsFixed(1)}%' : ''}'
-                      : _saveToGarden
-                      ? 'Plant added to your garden successfully!'
-                      : 'Analysis saved to your history',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 24),
+          Text(
+            'Analyzing your plant...',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textBlack,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This may take a few moments',
+            style: TextStyle(
+              color: AppColors.textGrey,
             ),
           ),
         ],
@@ -1674,28 +1316,366 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
     );
   }
 
-  Widget _buildDiseaseInfo(DiseaseInfo disease) {
+  Widget _buildIdentificationResult() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Plant Image
+          Container(
+            height: 250,
+            width: double.infinity, // Add this
+            decoration: BoxDecoration(
+              color: AppColors.beige,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Stack(
+              children: [
+                // Show the uploaded image - Center it
+                if (_selectedImage != null)
+                  Center(
+                    child: kIsWeb
+                        ? Image.network(_selectedImage!.path, fit: BoxFit.contain)
+                        : Image.file(File(_selectedImage!.path), fit: BoxFit.contain),
+                  ),
+                // Show the identified plant image as an overlay if available
+                if (_identificationResult != null &&
+                    _identificationResult!.plantImageUrl.isNotEmpty)
+                  Positioned(
+                    bottom: 10,
+                    right: 10,
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.network(
+                          _identificationResult!.plantImageUrl,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Plant Name
+          Text(
+            _identificationResult!.plantName,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textBlack,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Scientific Name
+          if (_identificationResult!.scientificName.isNotEmpty &&
+              _identificationResult!.scientificName != _identificationResult!.plantName)
+            Text(
+              _identificationResult!.scientificName,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.textGrey,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          const SizedBox(height: 24),
+
+          // Plant Details
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _identificationResult!.plantDetails,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textGrey,
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Health Check Button
+          ElevatedButton(
+            onPressed: () {
+              if (_matchingGardenPlants.isNotEmpty && !_isNewPlant && !_saveToGarden) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Please choose whether to add as new plant or sync with existing"),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+                return;
+              }
+              _detectDiseases();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: AppColors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Iconsax.health, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Diagnose Plant Health',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 15),
+
+          // Save to Garden Option
+          if (_matchingGardenPlants.isEmpty)
+            Row(
+              children: [
+                Checkbox(
+                  value: _saveToGarden,
+                  onChanged: (value) {
+                    setState(() {
+                      _saveToGarden = value ?? false;
+                    });
+                  },
+                  activeColor: AppColors.primaryGreen,
+                ),
+                const Text('Save to my garden'),
+              ],
+            ),
+
+          // Already in Garden Options
+          if (_matchingGardenPlants.isNotEmpty)
+            Column(
+              children: [
+                Text(
+                  'This plant is already in your garden',
+                  style: TextStyle(
+                    color: AppColors.primaryGreen,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            _isNewPlant = true;
+                            _matchingGardenPlants = [];
+                          });
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primaryGreen,
+                          side: BorderSide(color: AppColors.primaryGreen),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Add as New Plant'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _isNewPlant = false;
+                            _saveToGarden = true;
+                          });
+                          _detectDiseases();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryGreen,
+                          foregroundColor: AppColors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Update Existing'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+          const SizedBox(height: 15),
+
+          // Note Input Field (Add this before health check)
+          TextFormField(
+            controller: _noteController,
+            onChanged: (value) {
+              setState(() {
+                _plantNote = value;
+              });
+            },
+            decoration: InputDecoration(
+              labelText: 'Add a note about this plant',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              prefixIcon: Icon(Iconsax.note, color: AppColors.primaryGreen),
+            ),
+            maxLines: 1,
+          ),
+
+          const SizedBox(height: 125),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalysisResult() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Plant Image - Show the uploaded image
+          Container(
+            height: 250,
+            width: double.infinity, // Add this
+            decoration: BoxDecoration(
+              color: AppColors.beige,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Stack(
+              children: [
+                // Show the uploaded image - Center it
+                if (_selectedImage != null)
+                  Center(
+                    child: kIsWeb
+                        ? Image.network(_selectedImage!.path, fit: BoxFit.contain)
+                        : Image.file(File(_selectedImage!.path), fit: BoxFit.contain),
+                  ),
+                // Show the identified plant image as an overlay if available
+                if (_identificationResult != null &&
+                    _identificationResult!.plantImageUrl.isNotEmpty)
+                  Positioned(
+                    bottom: 10,
+                    right: 10,
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.network(
+                          _identificationResult!.plantImageUrl,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Plant Name
+          Text(
+            _analysisResult!.plantName,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textBlack,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Status Badge
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            decoration: BoxDecoration(
+              color: _analysisResult!.isHealthy
+                  ? AppColors.primaryGreen.withOpacity(0.1)
+                  : Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _analysisResult!.isHealthy ? 'HEALTHY' : 'NEEDS ATTENTION',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _analysisResult!.isHealthy
+                    ? AppColors.primaryGreen
+                    : Colors.orange,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Result Message
+          Text(
+            _analysisResult!.isHealthy
+                ? 'Your plant is healthy! No diseases detected. Keep up the good care!'
+                : 'We detected some issues with your plant:',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 16,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Disease List
+          if (!_analysisResult!.isHealthy)
+            ..._analysisResult!.diseases.map((disease) => _buildDiseaseCard(disease)),
+
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiseaseCard(DiseaseInfo disease) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.orange[50],
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.orange[100]!),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Disease Header
           Row(
             children: [
-              Icon(Icons.warning, color: Colors.orange[700], size: 20),
+              Icon(Iconsax.warning_2, size: 20, color: Colors.orange[700]),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   disease.name,
                   style: TextStyle(
-                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.orange[900],
                   ),
@@ -1704,76 +1684,68 @@ class _PlantAnalysisScreenState extends State<PlantAnalysisScreen> {
               Chip(
                 label: Text(
                   '${(disease.probability * 100).toStringAsFixed(1)}%',
-                  style: const TextStyle(fontSize: 12, color: Colors.white),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white,
+                  ),
                 ),
                 backgroundColor: Colors.orange[700],
-                padding: const EdgeInsets.symmetric(horizontal: 8),
               ),
             ],
           ),
-
-          const SizedBox(height: 12),
-
-          // Description Section
           if (disease.description != null && disease.description!.isNotEmpty)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Description:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange[800],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  disease.description!,
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 12),
-              ],
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                disease.description!,
+                style: const TextStyle(fontSize: 14),
+              ),
             ),
-
-          // Treatment Section
           if (disease.treatment != null && disease.treatment!.isNotEmpty)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Treatment & Prevention:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange[800],
-                  ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                'Treatment: ${disease.treatment!}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[100]!.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    disease.treatment!,
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-
-          // Fallback message if no information is available
-          if ((disease.description == null || disease.description!.isEmpty) &&
-              (disease.treatment == null || disease.treatment!.isEmpty))
-            Text(
-              'No detailed information available for this disease.',
-              style: TextStyle(
-                fontStyle: FontStyle.italic,
-                color: Colors.grey[600],
               ),
             ),
         ],
       ),
+    );
+  }
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Iconsax.camera, color: AppColors.primaryGreen),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _takePhoto();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Iconsax.gallery, color: AppColors.primaryGreen),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage();
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

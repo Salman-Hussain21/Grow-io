@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:iconsax/iconsax.dart';
+import '../utils/app_colors.dart';
 import '../model/garden_model.dart';
+import 'plant_analysis_screen.dart' hide AppColors; // Import the PlantAnalysisScreen
 
 class PlantDetailScreen extends StatelessWidget {
   final GardenPlant plant;
@@ -11,48 +14,29 @@ class PlantDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.white,
       appBar: AppBar(
-        title: const Text('Plant Details', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF4CAF50),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () => _showDeleteConfirmation(context),
-            tooltip: 'Remove from Garden',
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF9FBE7), Colors.white],
-          ),
+        title: Text(plant.plantName, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Iconsax.arrow_left, color: AppColors.textBlack),
+          onPressed: () => Navigator.pop(context),
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Plant Image
-              Container(
-                width: 120,
-                height: 120,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Plant Image
+            Center(
+              child: Container(
+                width: 200,
+                height: 200,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: _getStatusColor(plant.healthStatus),
-                    width: 4,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  border: Border.all(color: _getStatusColor(plant.healthStatus), width: 4),
                 ),
                 child: ClipOval(
                   child: plant.imageUrl.isNotEmpty
@@ -71,338 +55,310 @@ class PlantDetailScreen extends StatelessWidget {
                       );
                     },
                     errorBuilder: (context, error, stackTrace) {
-                      print('Image loading error: $error');
-                      return _buildDetailPlaceholder();
+                      return _buildPlaceholderIcon();
                     },
                   )
-                      : _buildDetailPlaceholder(),
+                      : _buildPlaceholderIcon(),
                 ),
               ),
-              const SizedBox(height: 24),
+            ),
 
-              // Plant Name
-              Text(
-                plant.plantName,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF33691E),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
+            const SizedBox(height: 24),
 
-              // Health Status
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _getStatusColor(plant.healthStatus).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _getStatusColor(plant.healthStatus)),
-                ),
-                child: Text(
-                  plant.healthStatus.toUpperCase(),
-                  style: TextStyle(
-                    color: _getStatusColor(plant.healthStatus),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Plant Details Card
-              Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Plant Information',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF33691E),
-                        ),
+            // Health Status
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Icon(
+                      Iconsax.health,
+                      color: _getStatusColor(plant.healthStatus),
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Health Status',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textGrey,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            plant.healthStatus,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: _getStatusColor(plant.healthStatus),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
-                      // Note Section (if available)
-                      if (plant.note != null && plant.note!.isNotEmpty)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Note:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
-                              ),
+            const SizedBox(height: 16),
+
+            // Last Checked Date
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Iconsax.calendar,
+                      color: AppColors.primaryGreen,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Last Checked',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textGrey,
                             ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.blue),
-                              ),
-                              child: Text(
-                                plant.note!,
-                                style: const TextStyle(color: Colors.blue),
-                              ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatDateTime(plant.lastAnalysisDate),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textBlack,
                             ),
-                            const SizedBox(height: 16),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
-                      _buildInfoRow('Added to garden', _formatDateTime(plant.addedDate)),
-                      _buildInfoRow('Last checked', _formatDateTime(plant.lastAnalysisDate)),
-
-                      // Improvement Percentage (if available)
-                      if (plant.improvementPercentage != null && plant.improvementPercentage != 0)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
-                            children: [
-                              const Text(
-                                'Improvement: ',
-                                style: TextStyle(fontWeight: FontWeight.w500),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: plant.improvementPercentage! > 0
-                                      ? Colors.green.withOpacity(0.1)
-                                      : Colors.orange.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
+            // Improvement Percentage (if available)
+            if (plant.improvementPercentage != null && plant.improvementPercentage != 0)
+              Column(
+                children: [
+                  const SizedBox(height: 16),
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            plant.improvementPercentage! > 0
+                                ? Iconsax.arrow_circle_up
+                                : Iconsax.arrow_circle_down,
+                            color: plant.improvementPercentage! > 0
+                                ? Colors.green
+                                : Colors.orange,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Improvement',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: AppColors.textGrey,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${plant.improvementPercentage!.toStringAsFixed(0)}%',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
                                     color: plant.improvementPercentage! > 0
                                         ? Colors.green
                                         : Colors.orange,
                                   ),
                                 ),
-                                child: Row(
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+            // Disease and Treatment Information (if plant needs attention)
+            if (plant.healthStatus.toLowerCase() == 'needs attention' &&
+                plant.diseases != null && plant.diseases!.isNotEmpty)
+              Column(
+                children: [
+                  const SizedBox(height: 16),
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Iconsax.warning_2,
+                                color: Colors.orange,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Detected Issues',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textBlack,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ...plant.diseases!.map((disease) =>
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(
-                                      plant.improvementPercentage! > 0
-                                          ? Icons.trending_up
-                                          : Icons.trending_down,
-                                      size: 16,
-                                      color: plant.improvementPercentage! > 0
-                                          ? Colors.green
-                                          : Colors.orange,
-                                    ),
-                                    const SizedBox(width: 4),
                                     Text(
-                                      '${plant.improvementPercentage!.toStringAsFixed(1)}%',
+                                      disease['name'] ?? 'Unknown Disease', // Access as map
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textBlack,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      disease['treatment'] ?? 'No treatment information available', // Access as map
                                       style: TextStyle(
-                                        color: plant.improvementPercentage! > 0
-                                            ? Colors.green
-                                            : Colors.orange,
-                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: AppColors.textGrey,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-
-                      const SizedBox(height: 12),
-                      Text(
-                        plant.plantDetails,
-                        style: const TextStyle(fontSize: 14),
-                        textAlign: TextAlign.left,
+                          ).toList(),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Diseases & Treatment Section - Only show if plant is not healthy AND has diseases
-              if (plant.diseases.isNotEmpty && !plant.isHealthy)
-                _buildDiseasesSection(),
-
-              // Healthy Plant Message - Show if plant is healthy
-              if (plant.isHealthy)
-                _buildHealthyPlantMessage(),
-
-              // Inconsistent data case: If plant has diseases but marked as healthy
-              if (plant.diseases.isNotEmpty && plant.isHealthy)
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.info, color: Colors.blue, size: 40),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Previous issues resolved',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Plant is now healthy (last checked: ${_formatDateTime(plant.lastAnalysisDate)})',
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
                     ),
                   ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHealthyPlantMessage() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const Icon(Icons.check_circle, size: 50, color: Colors.green),
-            const SizedBox(height: 16),
-            const Text(
-              'Plant is Healthy!',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'No diseases detected. Your plant is in good condition.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Last checked: ${_formatDateTime(plant.lastAnalysisDate)}',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildDiseasesSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Detected Issues',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF33691E),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...plant.diseases.map((disease) => _buildDiseaseInfo(disease)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDiseaseInfo(Map<String, dynamic> disease) {
-    final name = disease['name'] ?? 'Unknown Disease';
-    final probability = disease['probability']?.toDouble() ?? 0.0;
-    final description = disease['description'] ?? 'No description available';
-    final treatment = disease['treatment'] ?? 'No treatment information available';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange[100]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.warning, size: 20, color: Colors.orange),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange,
+            // Note (if available)
+            if (plant.note != null && plant.note!.isNotEmpty)
+              Column(
+                children: [
+                  const SizedBox(height: 16),
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Iconsax.note,
+                            color: Colors.blue,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Note',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: AppColors.textGrey,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  plant.note!,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textBlack,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-              Chip(
-                label: Text(
-                  '${(probability * 100).toStringAsFixed(1)}%',
-                  style: const TextStyle(fontSize: 12, color: Colors.white),
+
+            const SizedBox(height: 24),
+
+            // Rescan Button
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PlantAnalysisScreen(), // Navigate to PlantAnalysisScreen
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                backgroundColor: Colors.orange,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                minimumSize: const Size(double.infinity, 50),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (description != 'No description available') ...[
-            Text(
-              'Description: $description',
-              style: const TextStyle(fontSize: 14),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Iconsax.scan_barcode, size: 20),
+                  SizedBox(width: 8),
+                  Text('Rescan Plant'),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
           ],
-          if (treatment != 'No treatment information available') ...[
-            const Text(
-              'Treatment:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(treatment),
-          ],
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Text(
-            '$label: ',
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
-          Text(value),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailPlaceholder() {
+  Widget _buildPlaceholderIcon() {
     return Container(
       color: Colors.grey[200],
-      child: const Icon(Icons.eco, size: 50, color: Colors.grey),
+      child: const Icon(Iconsax.tree, size: 60, color: Colors.grey),
     );
   }
 
@@ -420,64 +376,5 @@ class PlantDetailScreen extends StatelessWidget {
   String _formatDateTime(Timestamp timestamp) {
     final date = timestamp.toDate();
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  void _showDeleteConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Remove Plant'),
-          content: const Text('Are you sure you want to remove this plant from your garden?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                _removePlantFromGarden(context);
-                Navigator.of(context).pop();
-              },
-              child: const Text('Remove', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _removePlantFromGarden(BuildContext context) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('garden')
-          .doc(plant.id)
-          .delete();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Plant removed from garden'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      // Navigate back after a short delay
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        Navigator.of(context).pop();
-      });
-
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error removing plant: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 }

@@ -1,10 +1,11 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'package:vision2025/screens/auth/email_confirmation.dart';
+import 'package:Growio/screens/auth/email_confirmation.dart';
+import 'package:Growio/screens/events.dart';
+import 'package:Growio/screens/plant_analysis_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
@@ -66,7 +67,7 @@ class GrowioApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        fontFamily: 'Inter',
+        fontFamily: 'Poppins',
       ),
       home: const AuthWrapper(),
       routes: {
@@ -80,6 +81,9 @@ class GrowioApp extends StatelessWidget {
         '/welcome': (context) => const WelcomeScreen(),
         '/home': (context) => const HomeScreen(),
         '/notifications': (context) => const NotificationsScreen(), // Add notifications route
+        '/events': (context) =>const EventsPage(),
+        '/scan_result': (context) => PlantAnalysisScreen(),
+
       },
     );
   }

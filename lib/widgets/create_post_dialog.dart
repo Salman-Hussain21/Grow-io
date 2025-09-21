@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
 import '../services/community_service.dart';
+import '../utils/app_colors.dart';
 
 class CreatePostDialog extends StatefulWidget {
   final CommunityService communityService;
@@ -70,61 +72,117 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Create Post'),
-      content: SingleChildScrollView(
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Create Post',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Iconsax.close_circle),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _contentController,
               maxLines: 5,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'What would you like to share?',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.textGrey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.primaryGreen),
+                ),
               ),
             ),
             const SizedBox(height: 16),
-
-            // Tags
-            TextField(
-              controller: _tagsController,
-              decoration: InputDecoration(
-                hintText: 'Add tags (press enter to add)',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: _addTag,
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _tagsController,
+                    decoration: InputDecoration(
+                      hintText: 'Add tags...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.textGrey),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primaryGreen),
+                      ),
+                    ),
+                    onSubmitted: (_) => _addTag(),
+                  ),
                 ),
-              ),
-              onSubmitted: (_) => _addTag(),
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryGreen,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Iconsax.add, color: Colors.white),
+                    onPressed: _addTag,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
-
             Wrap(
               spacing: 4,
               children: _tags.map((tag) {
                 return Chip(
                   label: Text('#$tag'),
                   onDeleted: () => _removeTag(tag),
+                  backgroundColor: AppColors.primaryGreen.withOpacity(0.2),
+                  labelStyle: const TextStyle(color: AppColors.primaryGreen),
+                  deleteIconColor: AppColors.primaryGreen,
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _createPost,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGreen,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+                    : const Text('Post', style: TextStyle(fontSize: 16)),
+              ),
             ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _isLoading ? null : _createPost,
-          child: _isLoading
-              ? const CircularProgressIndicator()
-              : const Text('Post'),
-        ),
-      ],
     );
   }
 

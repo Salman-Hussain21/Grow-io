@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:iconsax/iconsax.dart';
 
 // Import your other pages
 import 'account_management_page.dart';
@@ -18,8 +19,12 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final Color primaryColor = const Color(0xFF4CAF50);
-  final Color backgroundColor = const Color(0xFFF9FBE7);
-  bool _emailNotifications = true;
+  final Color backgroundColor = Colors.white;
+  final Color textBlack = const Color(0xFF1D1D1D);
+  final Color textGrey = const Color(0xFF7A7A7A);
+  final Color errorColor = const Color(0xFFD32F2F);
+
+  bool _darkMode = false;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -29,18 +34,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        foregroundColor: textBlack,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         children: [
-          // Account Management Section
-          _buildSectionHeader('Account Management'),
-          _buildListTile(
-            icon: Icons.person_outline,
-            title: 'Account Settings',
-            subtitle: 'Manage your profile, email, and password',
+          // Profile Section
+          _buildProfileSection(),
+          const SizedBox(height: 24),
+
+          // Account Settings
+          _buildSectionTitle('Account'),
+          _buildSettingsItem(
+            icon: Iconsax.user,
+            title: 'Profile Information',
             onTap: () {
               Navigator.push(
                 context,
@@ -48,61 +57,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
             },
           ),
-
-          const SizedBox(height: 24),
-
-          // Data Management Section
-          _buildSectionHeader('Data Management'),
-          _buildListTile(
-            icon: Icons.file_download_outlined,
-            title: 'Export Plant Data',
-            subtitle: 'Download your data as CSV or PDF',
-            onTap: () => _exportPlantData(context),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Help & Support Section
-          _buildSectionHeader('Help & Support'),
-          _buildListTile(
-            icon: Icons.help_outline,
-            title: 'FAQs & Help Center',
-            onTap: () => _openHelpCenter(context),
-          ),
-          _buildListTile(
-            icon: Icons.support_agent_outlined,
-            title: 'Contact Support',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ContactSupportPage()),
-              );
-            },
-          ),
-          _buildListTile(
-            icon: Icons.bug_report_outlined,
-            title: 'Report a Bug',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ReportBugPage()),
-              );
-            },
-          ),
-
-          const SizedBox(height: 24),
-
-          // About Section
-          _buildSectionHeader('About'),
-          _buildListTile(
-            icon: Icons.info_outline,
-            title: 'App Version',
-            subtitle: '1.0.0',
-            onTap: () {},
-          ),
-          _buildListTile(
-            icon: Icons.privacy_tip_outlined,
-            title: 'Privacy Policy',
+          _buildSettingsItem(
+            icon: Iconsax.shield,
+            title: 'Privacy & Security',
             onTap: () {
               Navigator.push(
                 context,
@@ -110,8 +67,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
             },
           ),
-          _buildListTile(
-            icon: Icons.description_outlined,
+          _buildSettingsItem(
+            icon: Iconsax.notification,
+            title: 'Notifications',
+            onTap: () {},
+          ),
+          const SizedBox(height: 24),
+
+          // App Settings
+          _buildSectionTitle('App'),
+          _buildSettingsItem(
+            icon: Iconsax.language_circle,
+            title: 'Language',
+            trailing: const Text('English'),
+            onTap: () {},
+          ),
+          _buildSettingsItem(
+            icon: Iconsax.moon,
+            title: 'Dark Mode',
+            trailing: Switch(
+              value: _darkMode,
+              activeColor: primaryColor,
+              onChanged: (value) {
+                setState(() {
+                  _darkMode = value;
+                });
+              },
+            ),
+            onTap: () {},
+          ),
+          _buildSettingsItem(
+            icon: Iconsax.data,
+            title: 'Data Usage',
+            onTap: () {},
+          ),
+          const SizedBox(height: 24),
+
+          // Support
+          _buildSectionTitle('Support'),
+          _buildSettingsItem(
+            icon: Iconsax.message_question,
+            title: 'Help Center',
+            onTap: () => _openHelpCenter(context),
+          ),
+          _buildSettingsItem(
+            icon: Iconsax.info_circle,
+            title: 'About Growio',
+            onTap: () {},
+          ),
+          _buildSettingsItem(
+            icon: Iconsax.document,
             title: 'Terms of Service',
             onTap: () {
               Navigator.push(
@@ -120,58 +125,225 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
             },
           ),
-          _buildListTile(
-            icon: Icons.share_outlined,
-            title: 'Share with Friends',
-            onTap: () => _shareApp(context),
+          _buildSettingsItem(
+            icon: Iconsax.lock,
+            title: 'Privacy Policy',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PrivacyPolicyPage()),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+
+          // Actions
+          _buildSectionTitle('Actions'),
+          _buildSettingsItem(
+            icon: Iconsax.export,
+            title: 'Export Data',
+            onTap: () => _exportPlantData(context),
+          ),
+          _buildSettingsItem(
+            icon: Iconsax.logout,
+            title: 'Log Out',
+            titleColor: errorColor,
+            onTap: () => _logout(context),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _buildBottomAppBar(context),
+    );
+  }
+
+  Widget _buildBottomAppBar(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: BottomAppBar(
+        color: Colors.white,
+        height: 70,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(Iconsax.home, 'Home', false, () {
+              Navigator.pushNamed(context, '/home');
+            }),
+            _buildNavItem(Iconsax.tree, 'Garden', false, () {
+              Navigator.pushNamed(context, '/my_garden');
+            }),
+            // Diagnose Button (Center)
+            Container(
+              margin: const EdgeInsets.only(bottom: 25),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/scan_result');
+                },
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        primaryColor,
+                        const Color(0xFF2E8B57),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryColor.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Iconsax.scan_barcode,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ),
+            ),
+            _buildNavItem(Iconsax.people, 'Community', false, () {
+              Navigator.pushNamed(context, '/community');
+            }),
+            _buildNavItem(Iconsax.setting_2, 'Settings', true, () {
+              Navigator.pushNamed(context, '/settings');
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isActive ? primaryColor : textBlack.withOpacity(0.5),
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isActive ? primaryColor : textBlack.withOpacity(0.5),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildProfileSection() {
+    final user = _auth.currentUser;
+    final displayName = user?.displayName ?? 'User Name';
+    final email = user?.email ?? 'user@example.com';
+
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 32,
+          backgroundImage: const AssetImage('assets/images/user_avatar.png'),
+          backgroundColor: Colors.grey[300],
+          child: user?.photoURL != null
+              ? ClipOval(
+            child: Image.network(
+              user!.photoURL!,
+              width: 64,
+              height: 64,
+              fit: BoxFit.cover,
+            ),
+          )
+              : null,
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                displayName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                email,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: textBlack.withOpacity(0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: Icon(Iconsax.edit_2, color: primaryColor),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AccountManagementPage()),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8, top: 8),
+      padding: const EdgeInsets.only(bottom: 8.0),
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 18,
+          fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: primaryColor,
+          color: textGrey,
         ),
       ),
     );
   }
 
-  Widget _buildListTile({
+  Widget _buildSettingsItem({
     required IconData icon,
     required String title,
-    String? subtitle,
-    Color? titleColor,
+    Widget? trailing,
+    Color titleColor = Colors.black,
     required VoidCallback onTap,
   }) {
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: primaryColor),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: titleColor ?? Colors.black87,
-          ),
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      leading: Icon(icon, color: primaryColor),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          color: titleColor,
         ),
-        subtitle: subtitle != null ? Text(subtitle) : null,
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
       ),
+      trailing: trailing ?? Icon(Iconsax.arrow_right_3, size: 20, color: textGrey),
+      onTap: onTap,
     );
   }
 
@@ -374,33 +546,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _shareApp(BuildContext context) {
-    // Simple share functionality without external packages
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Share with Friends'),
-          content: const Text('Tell your friends about our plant care app!'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Share message copied to clipboard')),
-                );
-                // In a real app, you might copy a message to clipboard
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-              child: const Text('Copy Message', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
-    );
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await _auth.signOut();
+      // Navigate to login screen or home screen as needed
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error signing out: $e')),
+      );
+    }
   }
 }

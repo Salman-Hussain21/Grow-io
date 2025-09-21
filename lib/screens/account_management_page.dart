@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:iconsax/iconsax.dart';
 
 class AccountManagementPage extends StatefulWidget {
   const AccountManagementPage({super.key});
@@ -16,6 +17,12 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
   final TextEditingController _emailController = TextEditingController();
   File? _profileImage;
   final ImagePicker _picker = ImagePicker();
+  final Color primaryColor = const Color(0xFF4CAF50);
+  final Color backgroundColor = Colors.white;
+  final Color textBlack = const Color(0xFF1D1D1D);
+  final Color textGrey = const Color(0xFF7A7A7A);
+  final Color primaryGreen = Color(0xFF3A7D52);
+  final Color errorColor = const Color(0xFFD32F2F);
 
   @override
   void initState() {
@@ -86,7 +93,10 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
               TextFormField(
                 controller: passwordController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'New Password'),
+                decoration: const InputDecoration(
+                  labelText: 'New Password',
+                  border: OutlineInputBorder(),
+                ),
               ),
             ],
           ),
@@ -112,7 +122,8 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
                   );
                 }
               },
-              child: const Text('Update'),
+              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+              child: const Text('Update', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -135,7 +146,10 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
               TextFormField(
                 controller: passwordController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password'),
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                ),
               ),
             ],
           ),
@@ -168,7 +182,7 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(backgroundColor: errorColor),
               child: const Text('Delete Account', style: TextStyle(color: Colors.white)),
             ),
           ],
@@ -182,34 +196,58 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Account Management'),
-        backgroundColor: Colors.green[700],
-        foregroundColor: Colors.white,
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        foregroundColor: textBlack,
+        leading: IconButton(
+          icon: const Icon(Iconsax.arrow_left),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
+        child: ListView(
           children: [
             // Profile Picture
-            GestureDetector(
-              onTap: _pickImage,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: _profileImage != null
-                    ? FileImage(_profileImage!)
-                    : const AssetImage('assets/default_profile.png') as ImageProvider,
-                child: _profileImage == null
-                    ? const Icon(Icons.camera_alt, size: 30)
-                    : null,
+            Center(
+              child: GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundImage: _profileImage != null
+                          ? FileImage(_profileImage!)
+                          : const AssetImage('assets/default_profile.png') as ImageProvider,
+                      backgroundColor: Colors.grey[300],
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: primaryColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Iconsax.camera, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Name Field
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Name',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                prefixIcon: const Icon(Iconsax.user),
               ),
             ),
             const SizedBox(height: 16),
@@ -217,16 +255,27 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
             // Email Field
             TextFormField(
               controller: _emailController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Email',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                prefixIcon: const Icon(Iconsax.sms),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
             // Update Profile Button
             ElevatedButton(
               onPressed: _updateProfile,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
               child: const Text('Update Profile'),
             ),
             const SizedBox(height: 16),
@@ -234,6 +283,14 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
             // Change Email Button
             ElevatedButton(
               onPressed: _updateEmail,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
               child: const Text('Change Email'),
             ),
             const SizedBox(height: 16),
@@ -241,6 +298,14 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
             // Change Password Button
             ElevatedButton(
               onPressed: _showChangePasswordDialog,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
               child: const Text('Change Password'),
             ),
             const SizedBox(height: 16),
@@ -248,8 +313,15 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
             // Delete Account Button
             ElevatedButton(
               onPressed: _showDeleteAccountDialog,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Delete Account', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: errorColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text('Delete Account'),
             ),
           ],
         ),

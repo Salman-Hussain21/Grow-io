@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:vision2025/screens/plant_details.dart';
+import '../utils/app_colors.dart';
+import 'plant_details.dart';
 import '../model/garden_model.dart';
 
 class MyGardenScreen extends StatefulWidget {
@@ -18,64 +20,79 @@ class _MyGardenScreenState extends State<MyGardenScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF9FBE7), Colors.white],
+      backgroundColor: AppColors.white,
+      appBar: AppBar(
+        title: const Text('My Garden', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Iconsax.scan_barcode, color: AppColors.primaryGreen, size: 28),
+            onPressed: () {
+              Navigator.pushNamed(context, '/scan_result');
+            },
           ),
-        ),
-        child: StreamBuilder<QuerySnapshot>(
-          stream: _firestore
-              .collection('users')
-              .doc(_auth.currentUser?.uid)
-              .collection('garden')
-              .orderBy('addedDate', descending: true)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
-
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (snapshot.data?.docs.isEmpty ?? true) {
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.eco, size: 64, color: Colors.grey),
-                    SizedBox(height: 16),
-                    Text(
-                      'Your garden is empty',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Add plants from plant analysis results',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final plants = snapshot.data!.docs.map((doc) => GardenPlant.fromFirestore(doc)).toList();
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: plants.length,
-              itemBuilder: (context, index) {
-                final plant = plants[index];
-                return _buildPlantCard(plant);
-              },
-            );
-          },
-        ),
+        ],
       ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _firestore
+            .collection('users')
+            .doc(_auth.currentUser?.uid)
+            .collection('garden')
+            .orderBy('addedDate', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.data?.docs.isEmpty ?? true) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Iconsax.tree, size: 64, color: AppColors.textGrey),
+                  SizedBox(height: 16),
+                  Text(
+                    'Your garden is empty',
+                    style: TextStyle(fontSize: 18, color: AppColors.textGrey),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Add plants from plant analysis results',
+                    style: TextStyle(color: AppColors.textGrey),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final plants = snapshot.data!.docs.map((doc) => GardenPlant.fromFirestore(doc)).toList();
+
+          return Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: plants.length,
+                  itemBuilder: (context, index) {
+                    final plant = plants[index];
+                    return _buildPlantCard(plant);
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 30.0),
+              )
+            ],
+          );
+        },
+      ),
+      bottomNavigationBar: _buildBottomAppBar(context),
     );
   }
 
@@ -114,10 +131,60 @@ class _MyGardenScreenState extends State<MyGardenScreen> {
         _removePlantFromGarden(plant.id);
       },
       child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        margin: const EdgeInsets.only(bottom: 16),
-        child: InkWell(
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ListTile(
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: _getStatusColor(plant.healthStatus), width: 2),
+            ),
+            child: ClipOval(
+              child: plant.imageUrl.isNotEmpty
+                  ? Image.network(
+                plant.imageUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(child: CircularProgressIndicator());
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return _buildPlaceholderIcon();
+                },
+              )
+                  : _buildPlaceholderIcon(),
+            ),
+          ),
+          title: Text(
+            plant.plantName,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(plant.healthStatus).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _getStatusColor(plant.healthStatus), width: 0.5),
+                ),
+                child: Text(
+                  plant.healthStatus,
+                  style: TextStyle(
+                    color: _getStatusColor(plant.healthStatus),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textGrey),
           onTap: () {
             Navigator.push(
               context,
@@ -126,169 +193,6 @@ class _MyGardenScreenState extends State<MyGardenScreen> {
               ),
             );
           },
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Plant Image
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: _getStatusColor(plant.healthStatus), width: 3),
-                  ),
-                  child: ClipOval(
-                    child: plant.imageUrl.isNotEmpty
-                        ? Image.network(
-                      plant.imageUrl,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(child: CircularProgressIndicator());
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return _buildPlaceholderIcon();
-                      },
-                    )
-                        : _buildPlaceholderIcon(),
-                  ),
-                ),
-                const SizedBox(width: 16),
-
-                // Plant Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        plant.plantName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF33691E),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-
-                      // Health Status Badge
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(plant.healthStatus).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: _getStatusColor(plant.healthStatus)),
-                            ),
-                            child: Text(
-                              plant.healthStatus,
-                              style: TextStyle(
-                                color: _getStatusColor(plant.healthStatus),
-                                fontWeight: FontWeight.w500,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-
-                          // Improvement Percentage Badge (if available)
-                          if (plant.improvementPercentage != null && plant.improvementPercentage != 0)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: plant.improvementPercentage! > 0
-                                      ? Colors.green.withOpacity(0.1)
-                                      : Colors.orange.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: plant.improvementPercentage! > 0
-                                        ? Colors.green
-                                        : Colors.orange,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      plant.improvementPercentage! > 0
-                                          ? Icons.trending_up
-                                          : Icons.trending_down,
-                                      size: 14,
-                                      color: plant.improvementPercentage! > 0
-                                          ? Colors.green
-                                          : Colors.orange,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${plant.improvementPercentage!.toStringAsFixed(0)}%',
-                                      style: TextStyle(
-                                        color: plant.improvementPercentage! > 0
-                                            ? Colors.green
-                                            : Colors.orange,
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 4),
-
-                      // Note Badge (if available)
-                      if (plant.note != null && plant.note!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.blue),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.note, size: 12, color: Colors.blue),
-                                const SizedBox(width: 4),
-                                Text(
-                                  plant.note!,
-                                  style: const TextStyle(
-                                    color: Colors.blue,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                      const SizedBox(height: 4),
-
-                      // Last Checked Date
-                      Text(
-                        'Last checked: ${_formatDateTime(plant.lastAnalysisDate)}',
-                        style: const TextStyle(color: Colors.grey, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Arrow Icon
-                const Icon(Icons.chevron_right, color: Colors.grey),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -325,7 +229,7 @@ class _MyGardenScreenState extends State<MyGardenScreen> {
   Widget _buildPlaceholderIcon() {
     return Container(
       color: Colors.grey[200],
-      child: const Icon(Icons.eco, size: 40, color: Colors.grey),
+      child: const Icon(Iconsax.tree, size: 20, color: Colors.grey),
     );
   }
 
@@ -340,13 +244,99 @@ class _MyGardenScreenState extends State<MyGardenScreen> {
     }
   }
 
-  String _formatDate(Timestamp timestamp) {
-    final date = timestamp.toDate();
-    return '${date.day}/${date.month}/${date.year}';
+  Widget _buildBottomAppBar(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: BottomAppBar(
+        color: Colors.white,
+        height: 70,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(Iconsax.home, 'Home', false, () {
+              Navigator.pushNamed(context, '/home');
+            }),
+            _buildNavItem(Iconsax.tree, 'Garden', true, () {
+              Navigator.pushNamed(context, '/my_garden');
+            }),
+            // Diagnose Button (Center)
+            Container(
+              margin: const EdgeInsets.only(bottom: 25),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/scan_result');
+                },
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.primaryGreen,
+                        Color(0xFF2E8B57),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryGreen.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Iconsax.scan_barcode,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ),
+            ),
+            _buildNavItem(Iconsax.people, 'Community', false, () {
+              Navigator.pushNamed(context, '/community');
+            }),
+            _buildNavItem(Iconsax.calendar, 'Events', false, () {
+              Navigator.pushNamed(context, '/events');
+            }),
+          ],
+        ),
+      ),
+    );
   }
 
-  String _formatDateTime(Timestamp timestamp) {
-    final date = timestamp.toDate();
-    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isActive ? AppColors.primaryGreen : AppColors.textBlack.withOpacity(0.5),
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isActive ? AppColors.primaryGreen : AppColors.textBlack.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -2,8 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:iconsax/iconsax.dart';
 import '../services/notification_service.dart';
 import '../model/notification_model.dart';
+import '../utils/app_colors.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -21,20 +23,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final user = _auth.currentUser;
 
     return Scaffold(
+      backgroundColor: AppColors.white,
       appBar: AppBar(
-        title: const Text('Notifications'),
-        backgroundColor: Colors.green[700],
-        foregroundColor: Colors.white,
+        title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.white,
+        foregroundColor: AppColors.textBlack,
+        elevation: 0,
         actions: [
           if (user != null)
             IconButton(
-              icon: const Icon(Icons.checklist),
+              icon: const Icon(Iconsax.tick_circle),
               onPressed: _markAllAsRead,
               tooltip: 'Mark all as read',
             ),
           if (user != null)
             IconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(Iconsax.trash),
               onPressed: _deleteAllNotifications,
               tooltip: 'Clear all',
             ),
@@ -60,6 +64,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
             itemCount: notifications.length,
             itemBuilder: (context, index) {
               return NotificationTile(
@@ -78,17 +83,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.notifications_off, size: 64, color: Colors.grey),
+          Icon(Iconsax.notification, size: 64, color: AppColors.textGrey),
           const SizedBox(height: 16),
           const Text(
             'Sign in to see notifications',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
+            style: TextStyle(fontSize: 18, color: AppColors.textGrey),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
               // Navigate to login screen
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
             child: const Text('Sign In'),
           ),
         ],
@@ -101,17 +114,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.notifications_none, size: 64, color: Colors.grey),
+          Icon(Iconsax.notification, size: 64, color: AppColors.textGrey),
           const SizedBox(height: 16),
           const Text(
             'No notifications yet',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
+            style: TextStyle(fontSize: 18, color: AppColors.textGrey),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'You\'ll get notified about upvotes, comments, and plant reminders',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'You\'ll get notified about upvotes, comments, and plant reminders',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: AppColors.textGrey),
+            ),
           ),
         ],
       ),
@@ -183,52 +199,93 @@ class NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: _getNotificationIcon(),
-      title: Text(
-        notification.title,
-        style: TextStyle(
-          fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: notification.isRead ? AppColors.white : AppColors.primaryGreen.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: notification.isRead ? Colors.transparent : AppColors.primaryGreen.withOpacity(0.3),
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _getNotificationColor(notification.type).withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _getNotificationIcon(notification.type),
+                  color: _getNotificationColor(notification.type),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      notification.title,
+                      style: TextStyle(
+                        fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      notification.message,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textGrey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _formatTime(notification.createdAt),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textGrey,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      subtitle: Text(notification.message),
-      trailing: Text(
-        _formatTime(notification.createdAt),
-        style: TextStyle(
-          fontSize: 12,
-          color: Colors.grey[600],
-        ),
-      ),
-      onTap: onTap,
-      tileColor: notification.isRead ? null : Colors.green[50],
     );
   }
 
-  Widget _getNotificationIcon() {
-    final icon = switch (notification.type) {
-      NotificationType.postUpvote => Icons.thumb_up,
-      NotificationType.postComment => Icons.comment,
-      NotificationType.commentUpvote => Icons.thumb_up,
-      NotificationType.commentReply => Icons.reply,
-      NotificationType.plantReminder => Icons.local_florist,
-      NotificationType.careTip => Icons.lightbulb_outline,
-      NotificationType.communityUpdate => Icons.people,
+  IconData _getNotificationIcon(NotificationType type) {
+    return switch (type) {
+      NotificationType.postUpvote => Iconsax.like_1,
+      NotificationType.postComment => Iconsax.message_text,
+      NotificationType.commentUpvote => Iconsax.like_1,
+      NotificationType.commentReply => Iconsax.message,
+      NotificationType.plantReminder => Iconsax.calendar,
+      NotificationType.careTip => Iconsax.lamp_charge,
+      NotificationType.communityUpdate => Iconsax.people,
     };
+  }
 
-    final color = switch (notification.type) {
+  Color _getNotificationColor(NotificationType type) {
+    return switch (type) {
       NotificationType.postUpvote => Colors.blue,
-      NotificationType.postComment => Colors.green,
+      NotificationType.postComment => AppColors.primaryGreen,
       NotificationType.commentUpvote => Colors.blue,
       NotificationType.commentReply => Colors.orange,
-      NotificationType.plantReminder => Colors.green[700],
+      NotificationType.plantReminder => AppColors.primaryGreen,
       NotificationType.careTip => Colors.amber,
       NotificationType.communityUpdate => Colors.purple,
     };
-
-    return CircleAvatar(
-      backgroundColor: color?.withOpacity(0.2),
-      child: Icon(icon, color: color, size: 20),
-    );
   }
 
   String _formatTime(DateTime time) {
